@@ -5,4 +5,4 @@ echo 'alias rpy=~/miniconda/envs/rpy/bin/python3.12' >> ~/.zshrc
 source ~/.zshrc
 conda activate rpy
 echo '*.' > .gitignore
-echo 'io_mid/*' > .gitignore
+echo 'io_mid/*' >> .gitignore
