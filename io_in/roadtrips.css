@@ -1,0 +1,79 @@
+/* ==== VARIABLES ================ */
+
+:root{
+    --light: #F2F9FF;
+    --dark: #143D66;
+    --page_bg: #FFFFFF
+}
+
+/* ==== BASIC ELEMENTS ================ */
+  
+body{
+    font-family: Quicksand, Ariel;
+    background-color: var(--page_bg);
+    color: var(--dark);
+    width: 1506px;
+    min-height: 1000px;
+}
+
+h1{
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 4px;
+}
+
+h2{
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 4px;
+}
+
+p{
+    font-size: 11pt;
+    margin: 4px;
+    text-align: justify;
+}
+
+ul{
+    margin-top: 2px;
+    margin-bottom: 2px;
+    font-size: 14px;
+}
+
+
+/* ==== DIVs ================ */
+
+div{
+    border: 1px solid var(--light);
+    float: left;
+    background-color: var(--light);
+    margin: 0px;
+}
+
+
+div.facet{
+    width:  500px;
+    height: 250px;
+}
+
+div.facet_title{
+    width:  500px;
+    height: 030px;
+}
+
+
+div.thin{
+    width:  302px;
+    height: 327px;
+}
+
+div.thin_title{
+    width:  302px;
+    height: 030px;
+}
+
+
+div.main{
+    width: 1200px;
+    height: 720px;
+}

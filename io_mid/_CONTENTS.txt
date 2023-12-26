@@ -1,0 +1,1 @@
+This directory holds intermediates saves from the project -- data objects that are outputs from one py script and inputs to another.  Such objects are generally temporary caches used to speed up development.
