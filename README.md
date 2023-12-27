@@ -21,10 +21,10 @@ TODO
 
 - [ ] Top Side Panel: Depict travel progress
   - [ ] Text inset
-  - [ ] Polar barchart: city
-  - [ ] Polar barchart: states
-  - [ ] Polar barchart: distance
+  - [X] Polar barchart: city
+  - [X] Polar barchart: states
   - [ ] Polar barchart: slider bar
+  - [ ] Refine hover elements
 - [ ] Bottom Side Panel: Show Oconus checklist scatter
   - [ ] Text inset
   - [ ] Scatterplot: oconus areas seen
