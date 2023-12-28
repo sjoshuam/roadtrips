@@ -140,13 +140,20 @@ def write_figure(fig, trace_dict = None, slider_bar = None):
 ##########==========##########==========##########==========##########==========##########==========
 ## TOP-LEVEL FUNCTIONS
 
+def draw_map_panel():
+    """
+        TODO
+    """
+    city_list = import_city_list()
+    trace_dict = build_city_trace(city_list)
+    fig = make_figure()
+    div = write_figure(fig = fig, trace_dict = trace_dict, slider_bar = None)
+    return div
+
 ##########==========##########==========##########==========##########==========##########==========
 ## CODE TESTS
     
 if __name__ == '__main__':
-    city_list = import_city_list()
-    trace_dict = build_city_trace(city_list)
-    fig = make_figure()
-    write_figure(fig = fig, trace_dict = trace_dict, slider_bar = None)
+    draw_map_panel()
 
 ##########==========##########==========##########==========##########==========##########==========
