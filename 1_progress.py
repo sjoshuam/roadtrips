@@ -17,14 +17,15 @@ params = {
         'Unvisited': 'hsv(0,0,15)',
         },
     'bar_borders': {
-        'Photographed': 'hsv(120,70,70)',
+        'Photographed': 'hsv(150,70,70)',
         'Visited': 'hsv(90,70,70)',
         'Unvisited': 'hsv(0,0,55)',
         },
     'bg_color': 'hsv(0,0,0)',
     'fg_color': 'hsv(0,0,80)',
     'margin': 2**5,
-    'initial_slider': 'Cities, By Region'
+    'initial_slider': 'Cities, By Region',
+    'dimensions': (800 - 5, 400 - 5)
 }
 
 ##########==========##########==========##########==========##########==========##########==========
@@ -95,6 +96,7 @@ def make_figure(city_list, params = params):
     tick_names = city_list[['region', 'theta']].groupby('region').agg('min').sort_values('theta')
     fig = go.Figure()
     fig = fig.update_layout(
+        width = params['dimensions'][0], height = params['dimensions'][1],
         plot_bgcolor = params['bg_color'],
         paper_bgcolor = params['bg_color'],
         polar = dict(bgcolor = params['bg_color']),

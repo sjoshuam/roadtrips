@@ -23,7 +23,7 @@ TODO
   - [ ] Text inset
   - [X] Polar barchart: city
   - [X] Polar barchart: states
-  - [ ] Polar barchart: slider bar
+  - [X] Polar barchart: slider bar
   - [ ] Refine hover elements
 - [ ] Bottom Side Panel: Show Oconus checklist scatter
   - [ ] Text inset
@@ -46,6 +46,14 @@ TODO
   - [ ] Resolve any remaining TODO notes
   - [ ] Fill in portfolio description
   - [ ] Spell/grammar check
+
+- [ ] Squash Bugs / Do Supplemental Development
+  - [X] Progress: Fix issue with PR being both oconus and not a state
+  - [ ] All: Resolve issues with buttons blocking text
+  - [ ] Data: Fill in miles walked
+  - [ ] Centralize color palette
+  - [ ] Centralize reusable code
+
 
 #### Source
 
