@@ -81,7 +81,7 @@ def write_figure(fig, trace_dict):
         TODO
     """
     fig = fig.add_traces([trace_dict[i] for i in trace_dict.keys()])
-    fig.write_html('io_out/OCONUS.html', full_html = True, include_plotlyjs = True)
+    fig.write_html('io_mid/OCONUS.html', full_html = True, include_plotlyjs = True)
     fig.write_html('io_mid/OCONUS.div', full_html = False, include_plotlyjs = False)
     div = '\n'.join(open('io_mid/OCONUS.div', 'rt').readlines())
     return div

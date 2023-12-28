@@ -173,7 +173,7 @@ def write_figure(fig, trace_dict, slider_bar):
     """
     fig = fig.add_traces([trace_dict[i] for i in trace_dict.keys()])
     fig = fig.update_layout(sliders = slider_bar)
-    fig.write_html('io_out/PROGRESS.html', full_html = True, include_plotlyjs = True)
+    fig.write_html('io_mid/PROGRESS.html', full_html = True, include_plotlyjs = True)
     fig.write_html('io_mid/PROGRESS.div', full_html = False, include_plotlyjs = False)
     div = '\n'.join(open('io_mid/PROGRESS.div', 'rt').readlines())
     return div
