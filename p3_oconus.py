@@ -66,7 +66,7 @@ def build_oconus_trace(city_list):
                 ),
             marker = dict(
                 color = params['visit_colors'][iter_status][0],
-                size = 2**4,
+                size = params['city_size'],
                 line = dict(color = params['visit_colors'][iter_status][1], width = 1),
                 ),
             name = name_now, mode = 'markers+text',

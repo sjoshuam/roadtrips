@@ -127,14 +127,27 @@ def refine_weather_data():
     all_data = all_data.agg('mean').reset_index()
     all_data = all_data.loc[(all_data['hour'] >= 8) & (all_data['hour'] <= 19)]
     all_data = all_data.groupby(['station','latitude','longitude','name','month','day']).agg('sum')
-    all_data = all_data.drop(columns = ['hour']).round(6).reset_index()
-    all_data.to_excel(os.path.join('io_mid', 'weather_data.xlsx'), index = False)
+    all_data = all_data.drop(columns = ['hour']).reset_index()
+    
+    ## bin time - early, mid months
+    all_data['month'] = all_data['month'].replace({i:params['months'][i-1] for i in range(1, 13)})
+    day_bins = {i:'EXCLUDE' for i in range(0, 32)}
+    day_bins.update({i:' (Early)' for i in range(1, 11)})
+    day_bins.update({i:' (Mid)' for i in range(16, 26)})
+    all_data['day'] = all_data['day'].replace(day_bins)
+    all_data['period'] = all_data['month'] + all_data['day']
+    all_data = all_data.loc[all_data['day'] != 'EXCLUDE', ~all_data.columns.isin(['day', 'month'])]
+    cols = all_data.columns[~all_data.columns.isin(['temp'])].to_list()
+    all_data = all_data.groupby(cols).agg('mean').reset_index()
+    all_data = all_data.pivot(index = 'station', columns = 'period', values = 'temp')
+
+    ## export as excell
+    all_data.to_excel(os.path.join('io_mid', 'weather_data.xlsx'))
     return None
 
-
 ##########==========##########==========##########==========##########==========##########==========
-## COMPONENT FUNCTIONS - build weather heatmap
-    
+## COMPONENT FUNCTIONS - build weather grid for go.Contour
+'''
 def extract_weather_data():
     """
         TODO
@@ -217,7 +230,39 @@ def knn_predict_grid(weather_data, weather_grid, params = params):
     parallel_tasks = [i.get() for i in parallel_tasks]
     parallel_tasks = pd.concat(parallel_tasks).sort_values(['period', 'latitude', 'longitude'])
     return parallel_tasks
+'''
 
+##########==========##########==========##########==========##########==========##########==========
+## COMPONENT FUNCTIONS - spare parts for building a weather contour map
+
+'''
+def import_weather_grid():
+    """
+        TODO
+    """
+    weather_grid = pd.read_excel(os.path.join('io_mid', 'weather_grid.xlsx'))
+    weather_grid = weather_grid.pivot(
+        index = ['period', 'latitude'], columns = ['longitude'], values = ['temp'])
+    weather_grid = weather_grid.sort_index(ascending = False)
+    return weather_grid
+
+
+
+def build_weather_trace(weather_grid):
+    """
+        TODO
+    """
+    print('TEST MODE')
+    periods = sorted(list(set(weather_grid.index.get_level_values('period'))))[0:1]
+    trace_dict = dict()
+    for iter_period in periods:
+        grid_now = weather_grid.loc[iter_period, 'temp']
+        trace_dict[iter_period] = go.Contour(
+            colorscale = 'Electric', name = iter_period, line_smoothing = 0.50,
+            x = grid_now.columns.values, y = grid_now.index.values, z = grid_now
+            )
+    return trace_dict
+'''
 
 ##########==========##########==========##########==========##########==========##########==========
 ## TOP-LEVEL FUNCTIONS
@@ -228,27 +273,26 @@ def download_weather_data():
     """
     weather_stations = import_weather_stations()
     retrieve_weather_data(weather_stations = weather_stations)
-    refine_weather_data()
-    return None
+    weather_data = refine_weather_data()
+    return weather_data
 
-
+'''
 def build_weather_model(params = params):
     """
         TODO
     """
     weather_data = extract_weather_data()
-    weather_grid = make_weather_grid(weather_data = weather_data)
-    weather_grid = knn_predict_grid(
-        weather_data = weather_data, weather_grid = weather_grid, params = params)
-    weather_grid.to_excel(os.path.join('io_mid', 'weather_grid.xlsx'), index = False)
+    #weather_grid = make_weather_grid(weather_data = weather_data)
+    #weather_grid = knn_predict_grid(
+    #    weather_data = weather_data, weather_grid = weather_grid, params = params)
+    #weather_grid.to_excel(os.path.join('io_mid', 'weather_grid.xlsx'), index = False)
     return weather_grid
-
+'''
 
 ##########==========##########==========##########==========##########==========##########==========
 ## CODE TESTS
 
 if __name__ == '__main__':
-    #weather_data = download_weather_data()
-    weather_grid = build_weather_model()
+    weather_data = download_weather_data()
 
 ##########==========##########==========##########==========##########==========##########==========
