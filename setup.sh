@@ -6,3 +6,4 @@ source ~/.zshrc
 conda activate rpy
 echo '*.' > .gitignore
 echo 'io_mid/*' >> .gitignore
+echo '__pycache__/*' >> .gitignore

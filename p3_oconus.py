@@ -40,6 +40,7 @@ def create_figure(city_list):
         width = params['width'], height = params['height'],
         plot_bgcolor = params['figure_colors']['bg'],
         paper_bgcolor = params['figure_colors']['bg'],
+        dragmode = False
     )
 
     return fig

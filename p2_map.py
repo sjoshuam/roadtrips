@@ -10,17 +10,20 @@ from xml.dom.minidom import parse as xml_parse
 ## define parameters
 params = dict(
     width = 1200 * 0.95, height = 720 * 0.95,
-    figure_colors = dict(bg= 'hsv(000,00,00)', fg= 'hsv(000,00,100)', mg= 'hsv(000,00,40)'),
+    figure_colors = dict(
+        bg= 'hsv(000,00,00)', fg= 'hsv(000,00,100)', mg= 'hsv(000,00,40)', soft=  'hsv(000,00,80)'),
     map_colors = dict(
         land = 'hsv(000,00,05)', water = 'hsv(000,00,00)',
-        coast = 'hsv(000,00,20)', border= 'hsv(000,00,20)',
+        coast = 'hsv(000,00,15)', border= 'hsv(000,00,15)',
         ),
     visit_colors = dict(
-        Unvisited    = ('hsv(030,00,00)', 'hsv(030,00,55)'),
-        Visited      = ('hsv(090,20,30)', 'hsv(090,70,70)'),
-        Photographed = ('hsv(150,20,30)', 'hsv(150,70,70)')
+        Unvisited    = ('hsv(30,00,00)', 'hsv(30,00,60)'),
+        Visited      = ('hsv(150,20,30)', 'hsv(150,70,80)'),
+        Photographed = ('hsv(90,20,30)', 'hsv(90,70,80)')
         ),
-    city_size = 2**3
+    weather_hue = 330,
+    city_size = 2**3,
+    route_res = 0.08,
     )
 
 ## TODO: Add routes (under city layers)
@@ -66,14 +69,15 @@ def add_weather_to_city(city_list):
         TODO
     """
     weather_data = pd.read_excel(os.path.join('io_mid', 'weather_data.xlsx'), index_col = 0)
-    weather_data.columns = 'weather_' + weather_data.columns
+    weather_data.columns = 'W∆' + weather_data.columns
     city_list = city_list.merge(
         right = weather_data, how = 'left', left_on = 'noaa_station', right_index = True)
+    city_list = city_list.round(1)
     ##city_list = city_list.fillna({i:0 for i in weather_data.columns})
     return city_list
 
 
-def import_routes():
+def import_routes(params = params):
     """
         TODO
     """
@@ -90,7 +94,7 @@ def import_routes():
 
     def extract_elements(elem):
         """TODO"""
-        elem = elem.getElementsByTagName('Placemark')[1::]
+        elem = elem.getElementsByTagName('Placemark')
         elem_name = [i.getElementsByTagName('name')[0].firstChild.nodeValue for i in elem]
         elem_xy = [refine_xy(i) for i in elem]
         return {elem_name[i]:elem_xy[i] for i in range(0, len(elem_name))}
@@ -101,15 +105,20 @@ def import_routes():
     x = {i:pd.concat(x[i]) for i in x.keys()}
     x = pd.concat([x[i].assign(**{'trip': i}) for i in x.keys()]).reset_index()
     x = x.rename(columns = {'level_0': 'segments', 'level_1': 'order'})
-    x['segments'] = 'segment_' + x['segments']
+    x['segments'] = 'S∆' + x['segments']
 
-    ## simplify data
-    x['dedup'] = x['trip'] + x['segments'] + (
-        x['lon'].round(2).astype(str) + x['lat'].round(2).astype(str))
-    x = x.loc[~x['dedup'].duplicated(), x.columns != 'dedup']
-
-
-    print(x)
+    ## simplify data and return
+    def tokenize_xy(x, n = params['route_res']):
+        return '|' + ((x / n).round(0) * n).round(6).astype(str) + '|'
+    x['dedup'] = tokenize_xy(x['lat']) + tokenize_xy(x['lon']) + x['trip'] + x['segments']
+    x['last'] = x['segments'] + x['trip']
+    x = x.merge(
+        right = x[['last', 'order']].groupby(['last']).agg('max'),
+        how = 'left', left_on = 'last', right_index = True
+        ).rename(columns = {'order_x': 'order'})
+    x['last'] = x['order_y'] == x['order']
+    x['dedup'] = x['dedup'].duplicated() & ~x['last']
+    x = x.loc[~x['dedup'], ~x.columns.isin(['dedup', 'last', 'order_y'])]
     return x
 
 
@@ -130,8 +139,7 @@ def make_figure(params = params):
         plot_bgcolor = params['figure_colors']['bg'],
         paper_bgcolor = params['figure_colors']['bg'],
         width = params['width'], height = params['height'],
-        showlegend = False
-
+        showlegend = False, dragmode = False
     )
 
     ## define map-specific figure parameters
@@ -161,48 +169,82 @@ def make_figure(params = params):
     return fig
 
 
-def build_route_trace(routes, params = params):
+def build_route_trace(routes, trace_dict, hover = True, params = params):
     """
         TODO
     """
+
+    ## set basic parameters
     route_traces = dict()
+    hover_template = '<b>{0}</b><br>Segment: {1}<extra></extra>'
+    if hover:
+        set_hoverinfo = 'all'
+        set_prefix = 'R∆'
+        set_visible = True
+        set_linecolor = params['visit_colors']['Photographed'][0]
+    else:
+        set_hoverinfo = 'none'
+        set_prefix = 'S∆'
+        set_visible = False
+        set_linecolor = params['visit_colors']['Photographed'][0]
+
+    ## iterative add traces for each route segment
     for iter_segment in set(routes['segments']):
+
         idx = routes['segments'] == iter_segment
-        route_traces[iter_segment] = go.Scattergeo(
+        if hover: hover_now = hover_template.format(
+            routes.loc[idx, 'trip'].values[0], routes.loc[idx, 'segments'].values[0][2::])
+        else: hover_now = None
+
+        route_traces[iter_segment.replace('S∆', set_prefix)] = go.Scattergeo(
             lat = routes.loc[idx, 'lat'],
             lon = routes.loc[idx, 'lon'],
-            customdata = routes.loc[idx, 'trip'],
-            hovertemplate = 'Trip: %{customdata}<extra></extra>',
+            hoverinfo = set_hoverinfo,
+            hovertemplate = hover_now,
             hoverlabel = dict(
                 align = 'right',
                 font_color = params['visit_colors']['Photographed'][1],
                 bgcolor = params['figure_colors']['bg']
                 ),
             marker = dict(
-                color = params['visit_colors']['Photographed'][1],
-                size = 0.1,
-                line = dict(color = params['visit_colors']['Photographed'][1], width = 0.1),
+                color = set_linecolor,
+                line = dict(width = 0.1)
                 ),
             name = routes.loc[idx, 'trip'].values[0],
             mode = 'lines',
-            visible = True
+            visible = set_visible
         )
-    return route_traces
+
+    trace_dict.update(route_traces)
+    return trace_dict
 
 
-def build_city_trace(city_list, trace_dict):
+def build_city_trace(city_list, trace_dict, hover = False):
     """
         TODO
     """
+
+    if hover:
+        set_hoverinfo = 'all'
+        set_prefix = 'M∆'
+        set_visible = False
+        set_hovertemplate = '%{customdata}<extra></extra>'
+    else:
+        set_hoverinfo = 'none'
+        set_prefix = 'C∆'
+        set_visible = True
+        set_hovertemplate = None
+
     city_trace = dict()
     for iter_status in params['visit_colors'].keys():
         idx = city_list['status'] == iter_status
         name_now = iter_status + ' Cities'
-        city_trace[name_now] = go.Scattergeo(
+        city_trace[set_prefix + name_now] = go.Scattergeo(
             lat = city_list.loc[idx, 'lat'],
             lon = city_list.loc[idx, 'lon'],
             customdata = city_list.loc[idx, 'hover_label'],
-            hovertemplate = '%{customdata}<extra></extra>',
+            hoverinfo = set_hoverinfo,
+            hovertemplate = set_hovertemplate,
             hoverlabel = dict(
                 align = 'right',
                 font_color = params['visit_colors'][iter_status][1],
@@ -214,7 +256,8 @@ def build_city_trace(city_list, trace_dict):
                 line = dict(color = params['visit_colors'][iter_status][1], width = 1),
                 ),
             name = name_now,
-            mode = 'markers'
+            mode = 'markers',
+            visible = set_visible
             )
     trace_dict.update(city_trace)
     return trace_dict
@@ -226,7 +269,7 @@ def build_weather_trace(city_list, trace_dict, params = params):
     """
     ## prepare needed objects
     weather_traces = dict()
-    weather_cols = city_list.columns[city_list.columns.str.startswith('weather_')].to_list()
+    weather_cols = city_list.columns[city_list.columns.str.startswith('W∆')].to_list()
 
     ## iteratively add traces for each weather score
     for iter_weather in weather_cols:
@@ -246,16 +289,18 @@ def build_weather_trace(city_list, trace_dict, params = params):
             hovertemplate = '%{customdata}<extra></extra>',
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['figure_colors']['fg'],
+                font_color = params['figure_colors']['soft'],
                 bgcolor = params['figure_colors']['bg']
                 ),
             marker = dict(
                 color = city_list['weather_color'],
-                colorscale = ['hsv(330,00,00)', 'hsv(330,80,80)'],
+                colorscale = [
+                    f'hsv({params['weather_hue']},00,00)',
+                    f'hsv({params['weather_hue']},80,80)'],
                 size = params['city_size'],
                 line = dict(color = params['figure_colors']['mg'], width = 1),
                 ),
-            name = iter_weather.replace('weather_', '')[3::],
+            name = iter_weather.replace('W∆', '')[3::],
             mode = 'markers',
             visible = False
         )
@@ -268,31 +313,42 @@ def formulate_slider_bar(trace_dict):
     """
         TODO
     """
-    
-    ## generate slider layers for for places visited
-    places_visited = dict(method = 'update', label = 'Travels',
-        args = [dict(
-            visible = [i.endswith('Cities') or i.startswith('segment_') for i in trace_dict.keys()]
-            )])
-    
-    ## generate slide layers for weather
-    weather_steps = list(trace_dict.keys())
-    weather_steps = [i for i in weather_steps if i.startswith('weather_')]
-    weather_slides = list()
-    for iter_weather in weather_steps:
-        weather_slides.append(
+
+    ## determine visibility toggles
+    visibility = pd.DataFrame({'Layer': list(trace_dict.keys())})
+    visibility['Travels:<br>Cities'] = visibility['Layer'].str.startswith('M∆')
+    visibility['Travels:<br>Routes'] = (
+        visibility['Layer'].str.startswith('R∆') | visibility['Layer'].str.startswith('C∆'))
+    visibility['Temperate:<br>JAN'] = visibility['Layer'].str.startswith('W∆01')
+    visibility['Temperate:<br>FEB'] = visibility['Layer'].str.startswith('W∆02')
+    visibility['Temperate:<br>MAR'] = visibility['Layer'].str.startswith('W∆03')
+    visibility['Temperate:<br>APR'] = visibility['Layer'].str.startswith('W∆04')
+    visibility['Temperate:<br>MAY'] = visibility['Layer'].str.startswith('W∆05')
+    visibility['Temperate:<br>JUN'] = visibility['Layer'].str.startswith('W∆06')
+    visibility['Temperate:<br>JUL'] = visibility['Layer'].str.startswith('W∆07')
+    visibility['Temperate:<br>AUG'] = visibility['Layer'].str.startswith('W∆08')
+    visibility['Temperate:<br>SEP'] = visibility['Layer'].str.startswith('W∆09')
+    visibility['Temperate:<br>OCT'] = visibility['Layer'].str.startswith('W∆10')
+    visibility['Temperate:<br>NOV'] = visibility['Layer'].str.startswith('W∆11')
+    visibility['Weather:<br>DEC'] = visibility['Layer'].str.startswith('W∆12')
+    visibility = visibility.set_index('Layer')
+
+    ## assemble slider steps
+    steps = list()
+    for iter_step in visibility.columns:
+        steps.append(
             dict(
-                method = 'update', label = iter_weather.replace('weather_', '')[3::],
-                args = [dict(visible = [i == iter_weather for i in trace_dict.keys()])]
-                )
-        )
+                method = 'update',
+                label = iter_step,
+                args = [dict(visible = visibility[iter_step])]
+                ))
+        
+    slider_bar = [dict(
+        font = dict(size = 10), currentvalue = dict(font = dict(size = 12)),
+        active = 1, steps = steps, pad = dict(b = 4, l = 16, r = 20)
+        )]
 
-    
-    ## compile slider layers
-    steps = [places_visited] + weather_slides
-
-    return [dict(currentvalue = dict(prefix = 'Travels and Weather Conditions: '),
-        active = 0, steps = steps, pad = dict(b = 4, l = 16, r = 20))]
+    return slider_bar
 
 
 def write_figure(fig, slider_bar, trace_dict):
@@ -320,8 +376,11 @@ def draw_map_panel():
     routes = import_routes()
 
     ## generate traces
-    trace_dict = build_route_trace(routes = routes)
-    trace_dict = build_city_trace(city_list = city_list, trace_dict= trace_dict)
+    trace_dict = dict()
+    trace_dict = build_route_trace(routes = routes, trace_dict= trace_dict, hover = True)
+    trace_dict = build_route_trace(routes = routes, trace_dict= trace_dict, hover = False)
+    trace_dict = build_city_trace(city_list = city_list, trace_dict= trace_dict, hover = True)
+    trace_dict = build_city_trace(city_list = city_list, trace_dict= trace_dict, hover = False)
     trace_dict = build_weather_trace(city_list= city_list, trace_dict= trace_dict)
 
     ## formulate slider bar and assemble figure

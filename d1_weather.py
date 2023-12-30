@@ -132,8 +132,8 @@ def refine_weather_data():
     ## bin time - early, mid months
     all_data['month'] = all_data['month'].replace({i:params['months'][i-1] for i in range(1, 13)})
     day_bins = {i:'EXCLUDE' for i in range(0, 32)}
-    day_bins.update({i:' (Early)' for i in range(1, 11)})
-    day_bins.update({i:' (Mid)' for i in range(16, 26)})
+    #day_bins.update({i:' (Early)' for i in range(1, 11)})
+    day_bins.update({i:' (Mid)' for i in range(7, 30-7)})
     all_data['day'] = all_data['day'].replace(day_bins)
     all_data['period'] = all_data['month'] + all_data['day']
     all_data = all_data.loc[all_data['day'] != 'EXCLUDE', ~all_data.columns.isin(['day', 'month'])]

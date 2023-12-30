@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 ## set parameters
 params = {
     'bar_colors': {
-        'Photographed': 'hsv(120,30,25)',
-        'Visited': 'hsv(90,30,25)',
+        'Photographed': 'hsv(90,30,25)',
+        'Visited': 'hsv(150,30,25)',
         'Unvisited': 'hsv(0,0,05)',
         },
     'bar_borders': {
-        'Photographed': 'hsv(150,70,70)',
-        'Visited': 'hsv(90,70,70)',
+        'Photographed': 'hsv(090,70,70)',
+        'Visited': 'hsv(150,70,70)',
         'Unvisited': 'hsv(0,0,55)',
         },
     'bg_color': 'hsv(0,0,0)',
@@ -117,7 +117,8 @@ def make_figure(city_list, params = params):
             ),
         polar_radialaxis = dict(
             gridcolor = params['bg_color'], showgrid = False, showticklabels = True,
-            griddash = 'dash')
+            griddash = 'dash'),
+        dragmode = False
 
     )
     return fig

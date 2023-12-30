@@ -1,2 +1,3 @@
 .*
 io_mid/*
+__pycache__/*
