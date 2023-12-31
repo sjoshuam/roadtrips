@@ -70,10 +70,10 @@ def decode_dend(dend):
             'label': ''
             })
         dend_data.append(dend_now)
-    dend_data = pd.concat(dend_data)
+    dend_data = pd.concat(dend_data).reset_index(drop = True).sort_values(by = 'icoord')
     dend_data.loc[dend_data['dcoord'] == 0, 'label'] = dend['ivl']
     dend_data.loc[dend_data['dcoord'] == 0, 'leaves'] = dend['leaves']
-    dend_data = dend_data.fillna({'leaves': -1}).astype({'leaves': int}).reset_index(drop = True)
+    dend_data = dend_data.fillna({'leaves': -1}).astype({'leaves': int}).sort_index()
     return dend_data
 
 def calculate_proximity_hierarchy(city_list):
@@ -88,7 +88,8 @@ def calculate_proximity_hierarchy(city_list):
         metric = calculate_haversine_distance
         )
     prox_dendrogram = hierarchy.dendrogram(
-        prox_link, no_plot = True, labels = city_list['city'].values
+        prox_link, no_plot = True, labels = city_list['city'].values,
+        get_leaves = True
         )
     
     ## extract data from dendrogram objects
