@@ -16,14 +16,14 @@ from math import radians, degrees, pi
 ## 
 
 params = dict(
-    width = 1300 * 0.97, height = 400 * 0.97,
+    width = 1300 * 0.98, height = 400 * 0.98,
     figure_colors = dict(
         bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
     )
 
 
 ##########==========##########==========##########==========##########==========##########==========
-## COMPONENT FUNCTIONS
+## GENERIC HELPER FUNCTIONS
 
 
 def calculate_haversine_distance(a, b):
@@ -35,70 +35,82 @@ def calculate_haversine_distance(a, b):
     return haversine_distances(a, b) * 3958.8 # distance in miles
 
 
+##########==========##########==========##########==========##########==========##########==========
+## COMPONENT FUNCTIONS - data shaping
+
+
 def import_city_list():
     """ TODO """
     return pd.read_excel(os.path.join('io_in', 'city_list.xlsx'), index_col = 0)
 
 
-def decode_merges(the_linkage):
+def make_merge_data(city_list, params = params):
     """
         TODO
     """
-    prox_tree = hierarchy.to_tree(the_linkage, rd = True)
-    tree_data = list()
-    def safely_get_kids(x):
+
+    ## generate scipy hierarchy objects
+    linkage = hierarchy.linkage(
+        y = city_list[['lon', 'lat']], metric = calculate_haversine_distance,
+        method = 'complete', optimal_ordering = True)
+    dendrogram = hierarchy.dendrogram(
+        linkage, no_plot = True, labels = city_list['city'].values, get_leaves = True)
+    
+    ## extract merges
+    def get_nodes(x):
         try: left, right = x.get_left().get_id(), x.get_right().get_id()
         except: left, right = -1, -1
-        return [left, right]
-    for iter_node in prox_tree[1]:
-        tree_data.append([iter_node.get_id()] + safely_get_kids(iter_node))
-    tree_data = pd.DataFrame(tree_data).astype(int)
-    tree_data.columns = ['Node', 'Left', 'Right']
-    return tree_data
+        dist = x.dist
+        return {'node': x.get_id(), 'left': left, 'right': right, 'dist': x.dist, 'count': x.count}
+
+    merges = hierarchy.to_tree(linkage, rd = True)[1]
+    merges = [get_nodes(merges[iter_node]) for iter_node in range(0, len(merges))]
+    merges = pd.DataFrame(merges)
+    merges['type'] = 'leaf'
+    merges.loc[merges['left'] != -1, 'type'] = 'branch'
+    merges = merges.merge(
+        right = city_list[['city']].rename(columns = {'city': 'left_name'}),
+        how = 'left', left_on = 'left', right_index = True
+    )
+    merges = merges.merge(
+        right = city_list[['city']].rename(columns = {'city': 'right_name'}),
+        how = 'left', left_on = 'right', right_index = True
+    )
+
+    ## extract coordinates
+    extract_xy = lambda x: pd.DataFrame(dendrogram[x], columns = [x + str(i) for i in range(0, 4)])
+    leaves = dendrogram['ivl']
+    dendrogram = pd.concat([extract_xy('icoord'),extract_xy('dcoord')], axis = 1)
+    dendrogram['order'] = list(range(0, dendrogram.shape[0]))
+    dendrogram['order'] = dendrogram['order'] + len(leaves)
+    dendrogram = dendrogram.sort_values('icoord0')
+    dendrogram['leaf0'] = ''
+    dendrogram['leaf3'] = ''
+    leaves_pop = leaves.copy()
+    for iter_row in dendrogram.index:
+        if dendrogram.loc[iter_row, 'dcoord0'] == 0:
+            dendrogram.loc[iter_row, 'leaf0'] = leaves_pop.pop(0)
+        if dendrogram.loc[iter_row, 'dcoord3'] == 0:
+            dendrogram.loc[iter_row, 'leaf3'] = leaves_pop.pop(0)
+    dendrogram = dendrogram.sort_values(by = 'order')
+
+    ## generate leaf colors
+    dendrogram['color'] = (dendrogram['icoord1'] + dendrogram['icoord2']) / 2
+    dendrogram['color'] = (360 * dendrogram['color'] / dendrogram['icoord2'].max()).round().astype(int)
+    dendrogram['color'] = 'hsv(' + dendrogram['color'].astype(str) + ',50,70)'
+    too_high = dendrogram['dcoord1'] > 750
+    dendrogram.loc[too_high, 'color'] = 'hsv(0,0,70)'
 
 
-def decode_dend(dend):
-    """
-        TODO
-    """
-    dend_data = list()
-    for iter_xy in range(0, len(dend['icoord'])):
-        dend_now = pd.DataFrame({
-            'bracket': iter_xy,
-            'icoord': dend['icoord'][iter_xy],
-            'dcoord': dend['dcoord'][iter_xy],
-            'label': ''
-            })
-        dend_data.append(dend_now)
-    dend_data = pd.concat(dend_data).reset_index(drop = True).sort_values(by = 'icoord')
-    dend_data.loc[dend_data['dcoord'] == 0, 'label'] = dend['ivl']
-    dend_data.loc[dend_data['dcoord'] == 0, 'leaves'] = dend['leaves']
-    dend_data = dend_data.fillna({'leaves': -1}).astype({'leaves': int}).sort_index()
-    return dend_data
-
-def calculate_proximity_hierarchy(city_list):
-    """
-        TODO
-    """
-
-    ## generate basic dendrogram material
-    prox_link = hierarchy.linkage(
-        y = city_list[['lon', 'lat']],
-        method = 'complete', optimal_ordering = True,
-        metric = calculate_haversine_distance
-        )
-    prox_dendrogram = hierarchy.dendrogram(
-        prox_link, no_plot = True, labels = city_list['city'].values,
-        get_leaves = True
-        )
-    
-    ## extract data from dendrogram objects
-    prox_merges = decode_merges(the_linkage = prox_link)
-    prox_dend = decode_dend(dend = prox_dendrogram)
-    return prox_merges, prox_dend
+    ## TODO do more accuracy checks on merge
+    return dendrogram
 
 
-def make_figure():
+##########==========##########==========##########==========##########==========##########==========
+## COMPONENT FUNCTIONS - figure rendition
+
+
+def make_figure(params = params):
     """
         TODO
     """
@@ -110,55 +122,69 @@ def make_figure():
         plot_bgcolor = params['figure_colors']['bg'],
         paper_bgcolor = params['figure_colors']['bg'],
         xaxis = dict(visible = False),
-        yaxis = dict(visible = True, range = [-380, 1000]),
+        yaxis = dict(
+            visible = True, range = [-380, 1000],
+            tickmode = 'array', ticktext = [str(i) + 'mi' for i in range(0, 1000, 200)],
+            tickvals = list(range(0, 1000, 200))
+            ),
         margin = dict(l = 0, r = 0, t = 0, b = 0),
         font = dict(size = 11),
         )
     return fig
 
 
-def draw_dendrogram(trace_dict, prox_dend):
+def draw_dendrogram(trace_dict, merge_data, params = params):
     """
         TODO
     """
     dend_dict = dict()
-
-    for i in set(prox_dend['bracket']):
-        idx = prox_dend['bracket'] == i
-        trace_dict['bracket ' + str(i)] = go.Scatter(
-            x = prox_dend.loc[idx, 'icoord'],
-            y = prox_dend.loc[idx, 'dcoord'],
-            hoverinfo = 'none',
-            showlegend = False,
-            mode = 'lines',
-            line = dict(color = params['figure_colors']['fg'])
+    icol = ['icoord' + str(i) for i in range(0, 4)]
+    dcol = ['dcoord' + str(i) for i in range(0, 4)]
+    for iter_row in merge_data.index:
+        dend_dict['bracket ' + str(iter_row)] = go.Scatter(
+            x = merge_data.loc[iter_row, icol], y = merge_data.loc[iter_row, dcol],
+            hoverinfo = 'none', showlegend = False, mode = 'lines',
+            line = dict(color =  merge_data.loc[iter_row, 'color'])
             )
-
     trace_dict.update(dend_dict)
     return trace_dict
 
 
-def annotate_dendeogram(annote_dict, prox_dend):
+def annotate_dendeogram(annote_dict, merge_data, params = params):
     """
         TODO
     """
     dend_annotation = dict()
-    max_pad = max([len(i) for i in prox_dend['label']])
-    for iter_idx in prox_dend.index:
-        if prox_dend.loc[iter_idx, 'label'] != '':
-            dend_annotation[prox_dend.loc[iter_idx, 'label']] = go.layout.Annotation(
-                x = prox_dend.loc[iter_idx, 'icoord'],
-                y = prox_dend.loc[iter_idx, 'dcoord'],
-                text = prox_dend.loc[iter_idx, 'label'].ljust(max_pad),
-                font = dict(size = 10, color = params['figure_colors']['fg']),
-                showarrow = False,
-                textangle = 90,
-                yshift = -50,
+
+    for iter_row in merge_data.index:
+
+        leaf0 = merge_data.loc[iter_row, 'leaf0']
+        leaf3 = merge_data.loc[iter_row, 'leaf3']
+
+
+        if leaf0 != '':
+            dend_annotation[leaf0] = go.layout.Annotation(
+                x = merge_data.loc[iter_row, 'icoord0'],
+                y = merge_data.loc[iter_row, 'dcoord0'],
+                text = merge_data.loc[iter_row, 'leaf0'].ljust(20),
+                font = dict(size = 10, color = merge_data.loc[iter_row, 'color']),
+                showarrow = False, textangle = 90, yshift = -55,
                 )
-    return dend_annotation
+        
+        if leaf3 != '':
+            dend_annotation[leaf3] = go.layout.Annotation(
+                x = merge_data.loc[iter_row, 'icoord3'],
+                y = merge_data.loc[iter_row, 'dcoord3'],
+                text = merge_data.loc[iter_row, 'leaf3'].ljust(20),
+                font = dict(size = 10, color = merge_data.loc[iter_row, 'color']),
+                showarrow = False, textangle = 90, yshift = -55,
+                )
+
+    annote_dict.update(dend_annotation)
+    return annote_dict
 
 
-def write_figure(fig, trace_dict, annote_dict):
+def write_figure(fig, annote_dict, trace_dict, params = params):
     """
         TODO
     """
@@ -179,15 +205,20 @@ def draw_proximity_panel():
     """
         TODO
     """
+
+    ## prepare data
     city_list = import_city_list().reset_index()
-    prox_hierarchy = calculate_proximity_hierarchy(city_list)
+    merge_data = make_merge_data(city_list)
+
+    ## generate traces
     fig = make_figure()
     trace_dict, annote_dict = dict(), dict()
-    trace_dict = draw_dendrogram(trace_dict = trace_dict, prox_dend = prox_hierarchy[1])
-    annote_dict = annotate_dendeogram(annote_dict = trace_dict, prox_dend = prox_hierarchy[1])
-    write_figure(fig, trace_dict = trace_dict, annote_dict = annote_dict)
+    trace_dict = draw_dendrogram(trace_dict = trace_dict, merge_data = merge_data)
+    annote_dict = annotate_dendeogram(annote_dict = annote_dict, merge_data = merge_data)
 
-
+    ## make figure
+    div = write_figure(fig, trace_dict = trace_dict, annote_dict = annote_dict)
+    return div
 
 
 ##########==========##########==========##########==========##########==========##########==========

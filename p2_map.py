@@ -11,15 +11,15 @@ from xml.dom.minidom import parse as xml_parse
 params = dict(
     width = 1200 * 0.95, height = 720 * 0.95,
     figure_colors = dict(
-        bg= 'hsv(000,00,00)', fg= 'hsv(000,00,100)', mg= 'hsv(000,00,40)', soft=  'hsv(000,00,80)'),
+        bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
     map_colors = dict(
         land = 'hsv(000,00,05)', water = 'hsv(000,00,00)',
         coast = 'hsv(000,00,15)', border= 'hsv(000,00,15)',
         ),
     visit_colors = dict(
         Unvisited    = ('hsv(30,00,00)', 'hsv(30,00,60)'),
-        Visited      = ('hsv(150,20,30)', 'hsv(150,70,80)'),
-        Photographed = ('hsv(90,20,30)', 'hsv(90,70,80)')
+        Visited      = ('hsv(210,20,30)', 'hsv(210,70,80)'),
+        Photographed = ('hsv(180,20,30)', 'hsv(180,70,80)')
         ),
     weather_hue = 330,
     city_size = 2**3,
@@ -289,7 +289,7 @@ def build_weather_trace(city_list, trace_dict, params = params):
             hovertemplate = '%{customdata}<extra></extra>',
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['figure_colors']['soft'],
+                font_color = params['figure_colors']['fg'],
                 bgcolor = params['figure_colors']['bg']
                 ),
             marker = dict(

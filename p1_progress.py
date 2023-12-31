@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 ## set parameters
 params = {
     'bar_colors': {
-        'Photographed': 'hsv(90,30,25)',
-        'Visited': 'hsv(150,30,25)',
+        'Photographed': 'hsv(180,30,25)',
+        'Visited': 'hsv(210,30,25)',
         'Unvisited': 'hsv(0,0,05)',
         },
     'bar_borders': {
-        'Photographed': 'hsv(090,70,70)',
-        'Visited': 'hsv(150,70,70)',
+        'Photographed': 'hsv(180,70,70)',
+        'Visited': 'hsv(210,70,70)',
         'Unvisited': 'hsv(0,0,55)',
         },
     'bg_color': 'hsv(0,0,0)',
@@ -130,7 +130,7 @@ def draw_bars(progress, params = params):
     """
     trace_dict = dict()
     for iter_trace in progress.keys():
-        for iter_bar in ['Photographed', 'Visited', 'Unvisited']:
+        for iter_bar in ['Unvisited', 'Visited', 'Photographed']:
             trace_dict[iter_trace + '_' + iter_bar] = go.Barpolar(
                 theta = progress[iter_trace]['theta'],
                 width = progress[iter_trace]['width'],
