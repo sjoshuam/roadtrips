@@ -330,7 +330,7 @@ def formulate_slider_bar(trace_dict):
     visibility['Temperate:<br>SEP'] = visibility['Layer'].str.startswith('W∆09')
     visibility['Temperate:<br>OCT'] = visibility['Layer'].str.startswith('W∆10')
     visibility['Temperate:<br>NOV'] = visibility['Layer'].str.startswith('W∆11')
-    visibility['Weather:<br>DEC'] = visibility['Layer'].str.startswith('W∆12')
+    visibility['Temperate:<br>DEC'] = visibility['Layer'].str.startswith('W∆12')
     visibility = visibility.set_index('Layer')
 
     ## assemble slider steps
