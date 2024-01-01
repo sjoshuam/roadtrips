@@ -8,23 +8,19 @@ import plotly.graph_objects as go
 from xml.dom.minidom import parse as xml_parse
 
 ## define parameters
-params = dict(
-    width = 1200 * 0.95, height = 720 * 0.95,
-    figure_colors = dict(
-        bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
-    map_colors = dict(
-        land = 'hsv(000,00,05)', water = 'hsv(000,00,00)',
-        coast = 'hsv(000,00,15)', border= 'hsv(000,00,15)',
-        ),
-    visit_colors = dict(
-        Unvisited    = ('hsv(30,00,00)', 'hsv(30,00,60)'),
-        Visited      = ('hsv(210,20,30)', 'hsv(210,70,80)'),
-        Photographed = ('hsv(180,20,30)', 'hsv(180,70,80)')
-        ),
-    weather_hue = 330,
+params = {
+    'color': pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
+}
+
+params['visit_colors'] = {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
+params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
+
+params.update(dict(
+    width = 1000 -5,
+    height = 720 -5,
     city_size = 2**3,
     route_res = 0.08,
-    )
+    ))
 
 ## TODO: Add routes (under city layers)
 
@@ -136,8 +132,8 @@ def make_figure(params = params):
     fig = fig.update_layout(
         template = 'plotly_dark',
         margin = dict(l = 0, r = 0, t = 0, b = 0),
-        plot_bgcolor = params['figure_colors']['bg'],
-        paper_bgcolor = params['figure_colors']['bg'],
+        plot_bgcolor = params['color'].loc[0,1],
+        paper_bgcolor = params['color'].loc[0,1],
         width = params['width'], height = params['height'],
         showlegend = False, dragmode = False
     )
@@ -152,18 +148,18 @@ def make_figure(params = params):
 
         ## define map color sceme
         showcountries = False, 
-        showcoastlines = True, coastlinecolor = params['map_colors']['coast'],
-        showland = True, landcolor = params['map_colors']['land'],
-        showocean = True, oceancolor = params['map_colors']['water'],
-        showsubunits = True, subunitcolor = params['map_colors']['border'],
-        showlakes = True, lakecolor = params['map_colors']['water'],
+        showcoastlines = True, coastlinecolor = params['color'].loc[25,2],
+        showland = True, landcolor = params['color'].loc[0,2],
+        showocean = True, oceancolor = params['color'].loc[0,2],
+        showsubunits = True, subunitcolor = params['color'].loc[25,2],
+        showlakes = True, lakecolor = params['color'].loc[0,2],
 
         ## define projection
         projection = dict(
             parallels = [49.38 - parallel_offset, 24.54 + parallel_offset],
             rotation = dict(lat = 39.83, lon = -99.58, roll = 0),
             type = 'conic conformal',
-            scale = 3
+            scale = 3.3
         )
     )
     return fig
@@ -177,16 +173,15 @@ def build_route_trace(routes, trace_dict, hover = True, params = params):
     ## set basic parameters
     route_traces = dict()
     hover_template = '<b>{0}</b><br>Segment: {1}<extra></extra>'
+    set_linecolor = params['color'].loc[25,1]
     if hover:
         set_hoverinfo = 'all'
         set_prefix = 'R∆'
         set_visible = True
-        set_linecolor = params['visit_colors']['Photographed'][0]
     else:
         set_hoverinfo = 'none'
         set_prefix = 'S∆'
         set_visible = False
-        set_linecolor = params['visit_colors']['Photographed'][0]
 
     ## iterative add traces for each route segment
     for iter_segment in set(routes['segments']):
@@ -203,8 +198,8 @@ def build_route_trace(routes, trace_dict, hover = True, params = params):
             hovertemplate = hover_now,
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['visit_colors']['Photographed'][1],
-                bgcolor = params['figure_colors']['bg']
+                font_color = params['color'].loc[50,1],
+                bgcolor = params['color'].loc[0,1]
                 ),
             marker = dict(
                 color = set_linecolor,
@@ -212,7 +207,8 @@ def build_route_trace(routes, trace_dict, hover = True, params = params):
                 ),
             name = routes.loc[idx, 'trip'].values[0],
             mode = 'lines',
-            visible = set_visible
+            visible = set_visible,
+            showlegend = False
         )
 
     trace_dict.update(route_traces)
@@ -247,13 +243,16 @@ def build_city_trace(city_list, trace_dict, hover = False):
             hovertemplate = set_hovertemplate,
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['visit_colors'][iter_status][1],
-                bgcolor = params['figure_colors']['bg']
+                font_color = params['color'].loc[params['visit_borders'][iter_status], 1],
+                bgcolor = params['color'].loc[0,1]
                 ),
             marker = dict(
-                color = params['visit_colors'][iter_status][0],
+                color = params['color'].loc[params['visit_colors'][iter_status], 1],
                 size = params['city_size'],
-                line = dict(color = params['visit_colors'][iter_status][1], width = 1),
+                line = dict(
+                    color = params['color'].loc[params['visit_borders'][iter_status], 1],
+                    width = 1
+                    ),
                 ),
             name = name_now,
             mode = 'markers',
@@ -289,16 +288,14 @@ def build_weather_trace(city_list, trace_dict, params = params):
             hovertemplate = '%{customdata}<extra></extra>',
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['figure_colors']['fg'],
-                bgcolor = params['figure_colors']['bg']
+                font_color = params['color'].loc[100, 3],
+                bgcolor = params['color'].loc[0, 3]
                 ),
             marker = dict(
                 color = city_list['weather_color'],
-                colorscale = [
-                    f'hsv({params['weather_hue']},00,00)',
-                    f'hsv({params['weather_hue']},80,80)'],
+                colorscale = [params['color'].loc[0,3], params['color'].loc[100,3]],
                 size = params['city_size'],
-                line = dict(color = params['figure_colors']['mg'], width = 1),
+                line = dict(color = params['color'].loc[50, 3], width = 1),
                 ),
             name = iter_weather.replace('W∆', '')[3::],
             mode = 'markers',

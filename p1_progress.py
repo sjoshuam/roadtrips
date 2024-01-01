@@ -11,22 +11,16 @@ import plotly.graph_objects as go
 
 ## set parameters
 params = {
-    'bar_colors': {
-        'Photographed': 'hsv(180,30,25)',
-        'Visited': 'hsv(210,30,25)',
-        'Unvisited': 'hsv(0,0,05)',
-        },
-    'bar_borders': {
-        'Photographed': 'hsv(180,70,70)',
-        'Visited': 'hsv(210,70,70)',
-        'Unvisited': 'hsv(0,0,55)',
-        },
-    'bg_color': 'hsv(0,0,0)',
-    'fg_color': 'hsv(0,0,80)',
+    'bar_colors': {'Photographed': 50, 'Visited': 25, 'Unvisited': 0},
+    'bar_borders': {'Photographed': 100, 'Visited': 50, 'Unvisited': 25},
     'margin': 2**5,
-    'initial_slider': 'Cities, By Region',
-    'dimensions': (800 - 5, 400 - 5)
+    'initial_slider': 'By Region',
+    'dimensions': (750 - 5, 400 - 5)
 }
+
+params['color'] = pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
+params['visit_colors'] =  {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
+params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS: Manipulate Data
@@ -64,22 +58,19 @@ def refine_data(city_list):
     state_agg.update({
         'Photographed': 'mean', 'Visited': 'mean', 'Unvisited': 'mean'})
 
-    ## sum by state
-    state_list = city_list.copy().loc[city_list['not'].isna()]
-    state_list = state_list[group_cols + list(stat_cols.keys()) +['state']]
-    state_list = state_list.groupby(group_cols +['state']).agg(state_agg)
-    state_list = state_list.reset_index().groupby(group_cols).agg(stat_cols).round(1)
 
-    ## sum by city at the regional and national levels
+    ## sum by city at the regional level
     city_list = city_list[group_cols + list(stat_cols.keys())].groupby(group_cols).agg(stat_cols)
+    city_list['total'] = city_list[['Photographed','Visited','Unvisited']].sum(axis = 1)
+
+    ### sum by city at the national level
     sum_list = pd.DataFrame({'USA':city_list.sum()}).T
     sum_list.index = sum_list.index.set_names(city_list.index.names)
 
     ## return
     progress = {
-        'States, By Region': state_list.reset_index(),
-        'Cities, By Region': city_list.reset_index(),
-        'Cities, Nationwide': sum_list.reset_index(),
+        'By Region': city_list.reset_index(),
+        'Total': sum_list.reset_index(),
 
     }
     return progress
@@ -96,12 +87,12 @@ def make_figure(city_list, params = params):
     tick_names = city_list[['region', 'theta']].groupby('region').agg('min').sort_values('theta')
     fig = go.Figure()
     fig = fig.update_layout(
-        width = params['dimensions'][0], height = params['dimensions'][1],
-        plot_bgcolor = params['bg_color'],
-        paper_bgcolor = params['bg_color'],
-        polar = dict(bgcolor = params['bg_color']),
-        font = dict(color = params['fg_color']),
-        template = 'plotly_dark',
+        width = params['dimensions'][0],
+        height = params['dimensions'][1],
+        plot_bgcolor = params['color'].loc[0,1],
+        paper_bgcolor = params['color'].loc[0,1],
+        polar = dict(bgcolor = params['color'].loc[0,1]),
+        font = dict(color = params['color'].loc[100,1]),
         margin = dict(
             r = params['margin'],
             l = params['margin'] * 2**1,
@@ -109,39 +100,96 @@ def make_figure(city_list, params = params):
             b = params['margin']
             ),
         polar_angularaxis = dict(direction = 'clockwise',
-            gridcolor = params['bg_color'], showgrid = True, showticklabels = True,
+            gridcolor = params['color'].loc[0,1],
+            showgrid = False,
+            showticklabels = True,
             ticktext = tick_names.reset_index()['region'],
             tickvals = tick_names['theta'],
             tickmode = 'array',
             griddash = 'dash'
             ),
         polar_radialaxis = dict(
-            gridcolor = params['bg_color'], showgrid = False, showticklabels = True,
-            griddash = 'dash'),
-        dragmode = False
+            gridcolor = params['color'].loc[0,1],
+            showgrid = False,
+            showticklabels = False,
+            griddash = 'dash',
+            showline = False,
+            ),
+        legend_title_text = 'Destinations',
+        dragmode = False,
+        legend = dict(x = 0)
 
     )
     return fig
 
 
-def draw_bars(progress, params = params):
+def draw_region_bars(city_list, progress, trace_dict, params = params):
     """
         TODO
     """
-    trace_dict = dict()
-    for iter_trace in progress.keys():
-        for iter_bar in ['Unvisited', 'Visited', 'Photographed']:
-            trace_dict[iter_trace + '_' + iter_bar] = go.Barpolar(
-                theta = progress[iter_trace]['theta'],
-                width = progress[iter_trace]['width'],
-                r = progress[iter_trace][iter_bar],
-                name = iter_bar,
-                visible = iter_trace == params['initial_slider'],
-                text = progress[iter_trace]['region'],
-                marker_color = params['bar_colors'][iter_bar],
-                marker_line = dict(color = params['bar_borders'][iter_bar], width = 1),
-                hovertemplate = iter_trace + ': %{r}'
-                )
+    bar_traces = dict()
+    for iter_bar in ['Photographed', 'Visited', 'Unvisited']:
+
+        radius_now = ((progress['By Region'][iter_bar] / progress['By Region']['total']
+            ).round(2) * 100).astype(int)
+        label_now = '<b>Destinations in the ' + progress['By Region']['region'] + ' Region</b><br>'
+        label_now += iter_bar + ': ' + radius_now.astype(str) + '%'
+
+        bar_traces['By Region_' + iter_bar] = go.Barpolar(
+            theta = progress['By Region']['theta'],
+            width = progress['By Region']['width'],
+            r = radius_now,
+            name = iter_bar,
+            visible = 'By Region' == params['initial_slider'],
+            text = progress['By Region']['region'],
+            marker_color = params['color'].loc[params['visit_colors'][iter_bar], 1],
+            marker_line = dict(
+                color = params['color'].loc[12, 1],
+                width = 1
+                ),
+            hovertemplate = '%{customdata}<extra></extra>',
+            customdata = label_now,
+            hoverlabel = dict(
+                font_color = params['color'].loc[params['bar_borders'][iter_bar], 1],
+                bgcolor = params['color'].loc[0,2]
+                ),
+        )
+    trace_dict.update(bar_traces)
+    return trace_dict
+
+
+def draw_bars(progress, trace_dict, params = params):
+    """
+        TODO
+    """
+    bar_traces = dict()
+    status_names = list(params['visit_colors'].keys())
+    status_colors = [params['color'].loc[i, 1] for i in params['visit_colors'].values()]
+    status_count = progress['Total'].loc[0, status_names].astype(int)
+    status_label = (status_count / status_count.sum() * 100).round().astype(int)
+    status_label = status_count.astype(str) + ' (' + status_label.astype(str) + '%)'
+    
+    bar_traces['Total'] = go.Pie(
+        hole = 0.5,
+        values = status_count,
+        labels = status_names,
+        visible = 'Total' == params['initial_slider'],
+        marker = dict(
+            colors = status_colors,
+            line = dict(color = params['color'].loc[12, 1], width = 1),
+            ),
+        hoverlabel = dict(
+            font_color = params['color'].loc[100, 1],
+            bgcolor = params['color'].loc[0, 2]
+            ),
+        hovertemplate = '<b>Destinations Nationwide </b><br>%{hovertext}: %{customdata}<extra></extra>',
+        hovertext = status_names,
+        customdata = status_label,
+        text = status_label, texttemplate = '%{text}',
+        textfont = dict(color = params['color'].loc[params['bar_borders'].values(), 1])
+        )
+
+    trace_dict.update(bar_traces)
     return trace_dict
 
 
@@ -165,7 +213,7 @@ def draw_slider(trace_dict, params = params):
         
     return [
         dict(
-            active = trace_keys.index(params['initial_slider']),
+            active = trace_keys.index(params['initial_slider'],),
             steps = steps,
             currentvalue = {'prefix':'Progress Towards Achieving Travel Goals: '}
             )]
@@ -194,10 +242,14 @@ def draw_progress_panel():
     city_list = import_data()
     progress = refine_data(city_list)
 
-    ## draw progress figure
+    ## generate map traces
     fig = make_figure(city_list)
-    trace_dict = draw_bars(progress)
+    trace_dict = dict()
+    trace_dict = draw_region_bars(city_list= city_list, progress= progress, trace_dict= trace_dict)
+    trace_dict = draw_bars(progress, trace_dict = trace_dict)
     slider_bar = draw_slider(trace_dict)
+
+    ## draw figure
     div = write_figure(fig, trace_dict, slider_bar)
 
     return div

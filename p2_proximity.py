@@ -16,7 +16,7 @@ from math import radians, degrees, pi
 ## 
 
 params = dict(
-    width = 1300 * 0.98, height = 400 * 0.98,
+    width = 1200 - 5, height = 400 - 5,
     figure_colors = dict(
         bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
     )
@@ -101,8 +101,6 @@ def make_merge_data(city_list, params = params):
     too_high = dendrogram['dcoord1'] > 750
     dendrogram.loc[too_high, 'color'] = 'hsv(0,0,70)'
 
-
-    ## TODO do more accuracy checks on merge
     return dendrogram
 
 
@@ -209,6 +207,7 @@ def draw_proximity_panel():
     ## prepare data
     city_list = import_city_list().reset_index()
     merge_data = make_merge_data(city_list)
+    merge_data.to_excel(os.path.join('io_mid', 'merge_data.xlsx'), index = False)
 
     ## generate traces
     fig = make_figure()

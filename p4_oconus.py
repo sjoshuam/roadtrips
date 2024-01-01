@@ -5,14 +5,20 @@
 ## INITIALIZE
 
 ## import packages
+import os
 import pandas as pd
 import plotly.graph_objects as go
-import p2_map
+import p3_map
 
 ## define parameters
-params = p2_map.params
-params['width']  = 400
-params['height'] = 120
+params = dict()
+params['width']  = 500 - 5
+params['height'] = 118 - 5
+params['color'] = pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
+params['visit_colors'] =  {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
+params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
+params['city_size'] = p3_map.params['city_size']
+
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS
@@ -21,10 +27,22 @@ def extract_oconus_data(city_list):
     """
         TODO
     """
+
+    ## limit to just oconus destination
     city_list = city_list.fillna({'not': ''}).sort_values('state')
     city_list = city_list.loc[city_list['not'].str.endswith('conus')].reset_index(drop = True)
     city_list['x'] = 20
     city_list['y'] = [(params['height'] - 40) - (20 * i) for i in range(0, city_list.shape[0])]
+
+    ## ensure legend is complete
+    fallback = pd.DataFrame({'status': list(params['visit_colors'].keys())})
+    fallback['x'] = -20
+    fallback['y'] = -20
+    fallback['city'] = 'NULL'
+    city_list = pd.concat([city_list, fallback])
+
+
+    city_list.to_csv('~/Desktop/test.csv')
     return city_list
 
 
@@ -36,11 +54,16 @@ def create_figure(city_list):
         xaxis = dict(range = [0, params['width']], visible = False),
         yaxis = dict(range = [0, params['height']], visible = False),
         margin = dict(l = 0, r = 0, t = 0, b = 0),
-        showlegend = False,
+        font = dict(color = params['color'].loc[100,1]),
+        showlegend = True,
         width = params['width'], height = params['height'],
-        plot_bgcolor = params['figure_colors']['bg'],
-        paper_bgcolor = params['figure_colors']['bg'],
-        dragmode = False
+        plot_bgcolor = params['color'].loc[0,1],
+        paper_bgcolor = params['color'].loc[0,1],
+        dragmode = False,
+        legend = dict(
+            x = 0.4, y = 0.8, yanchor = 'top', xanchor = 'left',
+            title = 'Destinations',
+            )
     )
 
     return fig
@@ -62,16 +85,18 @@ def build_oconus_trace(city_list):
             hovertemplate = '%{customdata}<extra></extra>',
             hoverlabel = dict(
                 align = 'right',
-                font_color = params['visit_colors'][iter_status][1],
-                bgcolor = params['figure_colors']['bg']
+                font_color = params['color'].loc[params['visit_borders'][iter_status], 1],
+                bgcolor = params['color'].loc[0,1]
                 ),
             marker = dict(
-                color = params['visit_colors'][iter_status][0],
+                color = params['color'].loc[params['visit_colors'][iter_status], 1],
                 size = params['city_size'],
-                line = dict(color = params['visit_colors'][iter_status][1], width = 1),
+                line = dict(
+                    color = params['color'].loc[params['visit_borders'][iter_status], 1],
+                    width = 1),
                 ),
             name = name_now, mode = 'markers+text',
-            textfont = dict(color = params['visit_colors'][iter_status][1]),
+            textfont = dict(color = params['color'].loc[params['visit_borders'][iter_status], 1]),
             textposition = 'middle right'
             )
     return trace_dict
@@ -95,7 +120,7 @@ def draw_oconus_panel():
     """
         TODO
     """
-    city_list = p2_map.import_city_list()
+    city_list = p3_map.import_city_list()
     city_list = extract_oconus_data(city_list)
     fig = create_figure(city_list)
     trace_dict = build_oconus_trace(city_list)
