@@ -1,7 +1,7 @@
 ##########==========##########==========##########==========##########==========##########==========
 ## HEADER
 
-import shutil
+import shutil, os
 
 ##########==========##########==========##########==========##########==========##########==========
 ## DEFINE COMPONENT FUNCTIONS
@@ -9,6 +9,14 @@ import shutil
 def import_html():
     """read in empty html dashboard"""
     return '\n'.join(open('io_in/roadtrips.html', 'rt').readlines())
+
+
+def inject_stats(html):
+    """Fill in statistics as needed"""
+    stats = open(os.path.join('io_mid', 'STATS.txt'), 'rt').readlines()
+    for j in [i.split(':') for i in stats]:
+        html = html.replace('<insert>' + j[0] + '</insert>', j[1])
+    return html
 
 
 def inject_div(id, html, div_class):
@@ -35,6 +43,7 @@ def export_html(html):
 
 if __name__ == '__main__':
     html = import_html()
+    html = inject_stats(html = html)
     html = inject_div(id = 'PROGRESS',  html = html, div_class = 'facet_panel' )
     html = inject_div(id = 'MAP',       html = html, div_class = 'main_panel'  )
     html = inject_div(id = 'OCONUS',    html = html, div_class = 'oconus_panel')

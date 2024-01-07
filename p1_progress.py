@@ -15,7 +15,7 @@ params = {
     'bar_borders': {'Photographed': 100, 'Visited': 50, 'Unvisited': 25},
     'margin': 2**5,
     'initial_slider': 'By Region',
-    'dimensions': (750 - 5, 400 - 5)
+    'dimensions': (750 - 10, 392 - 10)
 }
 
 params['color'] = pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
@@ -115,7 +115,7 @@ def make_figure(city_list, params = params):
             griddash = 'dash',
             showline = False,
             ),
-        legend_title_text = 'Destinations',
+        legend_title_text = 'KEY: Destinations',
         dragmode = False,
         legend = dict(x = 0)
 
@@ -229,6 +229,16 @@ def write_figure(fig, trace_dict, slider_bar):
     div = '\n'.join(open('io_mid/PROGRESS.div', 'rt').readlines())
     return div
 
+def write_stats(city_list):
+    """
+        TODO
+    """
+    bottomline = 'BOTTOMLINE:{count} ({pct}%)'.format(
+        count = int(city_list['Photographed'].sum()),
+        pct = int(city_list['Photographed'].mean().round(2)*100)
+        )
+    open(os.path.join('io_mid', 'stats.txt'), 'wt').writelines(bottomline)
+
 
 ##########==========##########==========##########==========##########==========##########==========
 ## TOP-LEVEL FUNCTIONS
@@ -241,6 +251,7 @@ def draw_progress_panel():
     ## import and refine data
     city_list = import_data()
     progress = refine_data(city_list)
+    write_stats(city_list = city_list)
 
     ## generate map traces
     fig = make_figure(city_list)

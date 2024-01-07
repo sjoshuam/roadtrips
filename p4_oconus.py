@@ -12,8 +12,8 @@ import p3_map
 
 ## define parameters
 params = dict()
-params['width']  = 500 - 5
-params['height'] = 118 - 5
+params['width']  = 500 - 10
+params['height'] = 118 - 10
 params['color'] = pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
 params['visit_colors'] =  {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
 params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
@@ -41,8 +41,6 @@ def extract_oconus_data(city_list):
     fallback['city'] = 'NULL'
     city_list = pd.concat([city_list, fallback])
 
-
-    city_list.to_csv('~/Desktop/test.csv')
     return city_list
 
 
@@ -62,7 +60,7 @@ def create_figure(city_list):
         dragmode = False,
         legend = dict(
             x = 0.4, y = 0.8, yanchor = 'top', xanchor = 'left',
-            title = 'Destinations',
+            title = 'KEY: Destinations',
             )
     )
 

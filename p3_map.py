@@ -16,8 +16,8 @@ params['visit_colors'] = {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
 params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
 
 params.update(dict(
-    width = 1000 -5,
-    height = 720 -5,
+    width = 1000 - 10,
+    height = 720 - 10,
     city_size = 2**3,
     route_res = 0.08,
     ))
@@ -44,7 +44,7 @@ def import_city_list():
     ## fill in missing data and format
     ## TODO
     city_list['miles'] = city_list['miles'].round(1)
-    city_list = city_list.fillna({'miles': 'TODO', 'photo_date': 'Never'}).reset_index(drop = True)
+    city_list = city_list.fillna({'miles': 'Data Pending', 'photo_date': 'Never'}).reset_index(drop = True)
     city_list['state_criteria'] = city_list['state_criteria'].str.capitalize()
 
     ## formulate hover labels
@@ -273,12 +273,17 @@ def build_weather_trace(city_list, trace_dict, params = params):
     ## iteratively add traces for each weather score
     for iter_weather in weather_cols:
 
-        ## generate iteration specific data
-        city_list['weather_label'] = city_list['hover_label'].copy()
-        new_text = '<br>Temperate Hours: ' + city_list[iter_weather].astype(str)
-        city_list['weather_label'] = city_list['weather_label'] + new_text
+        ## generate iteration specific hover labels
+        city_list['weather_label'] = '<b>' + city_list['city'].copy() + '</b>'
+        city_list['weather_label'] += '<br>Temperate Hours: ' + city_list[iter_weather].astype(str)
+        city_list['weather_label'] += '<br>Climate: ' + city_list['climate_major']
+        city_list['weather_label'] += '<br>Summer: ' + city_list['climate_summer']
+        city_list['weather_label'] += '<br>Winter: ' + city_list['climate_winter']
+        city_list['weather_label'] += '<br>Koppen Type: ' + city_list['koppen']
+
+        ## generate iteration specific colors
         city_list['weather_color'] = city_list[iter_weather] / 12
-        city_list['weather_color'] = (city_list['weather_color'] / (1/6)).round() * (1/6)
+        city_list['weather_color'] = (city_list['weather_color']).round(1)
 
         ## render weather-based traces
         weather_traces[iter_weather] = go.Scattergeo(
