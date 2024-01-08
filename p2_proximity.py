@@ -6,34 +6,15 @@ import os
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-
-## 
 from scipy.cluster import hierarchy
-from scipy.spatial.distance import pdist
-from sklearn.metrics.pairwise import haversine_distances
-from math import radians, degrees, pi
+from pyproj import Proj
 
-## 
-
+## set parameters
 params = dict(
-    width = 1200 - 5, height = 400 - 5,
+    width = 1000 - 10, height = 400 - 10,
     figure_colors = dict(
         bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
     )
-
-
-##########==========##########==========##########==========##########==========##########==========
-## GENERIC HELPER FUNCTIONS
-
-
-def calculate_haversine_distance(a, b):
-    """
-        TODO
-    """
-    a = a.reshape(1, -1) * (pi/180)
-    b = b.reshape(1, -1) * (pi/180)
-    return haversine_distances(a, b) * 3958.8 # distance in miles
-
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS - data shaping
@@ -41,7 +22,26 @@ def calculate_haversine_distance(a, b):
 
 def import_city_list():
     """ TODO """
-    return pd.read_excel(os.path.join('io_in', 'city_list.xlsx'), index_col = 0)
+    city_list = pd.read_excel(os.path.join('io_in', 'city_list.xlsx'), index_col = 0)
+    idx = city_list['photo_date'].isna() | (city_list['city'] == 'Washington DC')
+    city_list = city_list.loc[idx]
+    return city_list
+
+def project_coordinates(city_list):
+    """
+        TODO
+    """
+    project_lcc = Proj(proj = 'lcc +lon_0=-99.58 +lat_1=24.54 +lat_2=49.38', ellsp = 'WGS84')
+    city_list['x'] = 0.0
+    city_list['y'] = 0.0
+    for iter_row in city_list.index:
+        city_list.loc[iter_row, ['x','y']] = project_lcc(
+            max(city_list.loc[iter_row, 'lon'], -130),
+            max(city_list.loc[iter_row, 'lat'], 20)
+            )
+    city_list['x'] = (city_list['x'] / 1609.34).round().astype(int)
+    city_list['y'] = (city_list['y'] / 1609.34).round().astype(int)
+    return city_list
 
 
 def make_merge_data(city_list, params = params):
@@ -50,9 +50,7 @@ def make_merge_data(city_list, params = params):
     """
 
     ## generate scipy hierarchy objects
-    linkage = hierarchy.linkage(
-        y = city_list[['lon', 'lat']], metric = calculate_haversine_distance,
-        method = 'complete', optimal_ordering = True)
+    linkage = hierarchy.linkage(y = city_list[['x', 'y']], method = 'ward', optimal_ordering = True)
     dendrogram = hierarchy.dendrogram(
         linkage, no_plot = True, labels = city_list['city'].values, get_leaves = True)
     
@@ -98,7 +96,7 @@ def make_merge_data(city_list, params = params):
     dendrogram['color'] = (dendrogram['icoord1'] + dendrogram['icoord2']) / 2
     dendrogram['color'] = (360 * dendrogram['color'] / dendrogram['icoord2'].max()).round().astype(int)
     dendrogram['color'] = 'hsv(' + dendrogram['color'].astype(str) + ',50,70)'
-    too_high = dendrogram['dcoord1'] > 750
+    too_high = dendrogram['dcoord1'] > 1400
     dendrogram.loc[too_high, 'color'] = 'hsv(0,0,70)'
 
     return dendrogram
@@ -121,9 +119,11 @@ def make_figure(params = params):
         paper_bgcolor = params['figure_colors']['bg'],
         xaxis = dict(visible = False),
         yaxis = dict(
-            visible = True, range = [-380, 1000],
-            tickmode = 'array', ticktext = [str(i) + 'mi' for i in range(0, 1000, 200)],
-            tickvals = list(range(0, 1000, 200))
+            visible = True, 
+            range = [-440, 1200],
+            tickmode = 'array', 
+            ticktext = [str(i) + 'mi' for i in range(0, 1200, 200)],
+            tickvals = list(range(0, 1200, 200))
             ),
         margin = dict(l = 0, r = 0, t = 0, b = 0),
         font = dict(size = 11),
@@ -206,8 +206,8 @@ def draw_proximity_panel():
 
     ## prepare data
     city_list = import_city_list().reset_index()
+    city_list = project_coordinates(city_list)
     merge_data = make_merge_data(city_list)
-    merge_data.to_excel(os.path.join('io_mid', 'merge_data.xlsx'), index = False)
 
     ## generate traces
     fig = make_figure()
@@ -225,5 +225,7 @@ def draw_proximity_panel():
     
 if __name__ == '__main__':
     draw_proximity_panel()
+
+
 
 ##########==========##########==========##########==========##########==========##########==========
