@@ -14,10 +14,11 @@ from pyproj import Proj
 
 ## set parameters
 params = dict(
-    width = 1000 - 10, height = 720 - 10,
+    width = 1300 - 10, height = 720 - 10,
     figure_colors = dict(
         bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
-    too_high = 2400
+    too_high = 2400,
+    label_height = 250,
     )
 
 ##########==========##########==========##########==========##########==========##########==========
@@ -41,8 +42,8 @@ def project_coordinates(city_list: pd.DataFrame) -> pd.DataFrame:
     city_list['y'] = 0.0
     for iter_row in city_list.index:
         city_list.loc[iter_row, ['x','y']] = project_lcc(
-            max(city_list.loc[iter_row, 'lon'], -130),
-            max(city_list.loc[iter_row, 'lat'], 20)
+            max(city_list.loc[iter_row, 'lon'], -179),
+            max(city_list.loc[iter_row, 'lat'], 0),
             )
     city_list['x'] = (city_list['x'] / 1609.34).round().astype(int)
     city_list['y'] = (city_list['y'] / 1609.34).round().astype(int)
@@ -153,7 +154,7 @@ def extract_merge_nodes(hierarchy_dendrogram, params = params):
     merge_nodes['color_line'] = 'hsv(' + merge_nodes['hue'].astype(str) + ',50,80)'
     merge_nodes['color_fill'] = 'hsv(' + merge_nodes['hue'].astype(str) + ',50,20)'
     merge_nodes['label_type'] = 'hover'
-    merge_nodes.loc[merge_nodes['dcoord'] >= 400, 'label_type'] = 'text'
+    merge_nodes.loc[merge_nodes['dcoord'] >= params['label_height'], 'label_type'] = 'text'
     merge_nodes = merge_nodes.loc[merge_nodes['dcoord'] < params['too_high']]
     return merge_nodes.reset_index(drop = True)
 
