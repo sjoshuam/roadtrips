@@ -47,7 +47,7 @@ if __name__ == '__main__':
     html = inject_div(id = 'PROGRESS',  html = html, div_class = 'facet_panel' )
     html = inject_div(id = 'MAP',       html = html, div_class = 'main_panel'  )
     html = inject_div(id = 'OCONUS',    html = html, div_class = 'oconus_panel')
-    html = inject_div(id = 'PROXIMITY', html = html, div_class = 'bottom_panel')
+    html = inject_div(id = 'PROXIMITY', html = html, div_class = 'main_panel')
     export_html(html)
 
 ##########==========##########==========##########==========##########==========##########==========
