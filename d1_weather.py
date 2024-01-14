@@ -1,5 +1,19 @@
 """
-    TODO
+    Purpose: Download NOAA weather data and compile it into information on the best time to visit
+        each destination.
+    Inputs:
+        io_in/city_list.xlsx: provides information on the destinations I seek to visit and my
+            progress visiting them.
+        www.ncei.noaa.gov: code downloads weather data from this site and stores it in
+            io_mid/weather_data
+    Outputs:
+        io_mid/weather_data.xlsx: records the average number of temperate hours per day in each
+            destination for periods throughout the year.
+    Open GitHub Issues:
+        #9 transfer commented-out code to new detailed weather script.
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+        #17 Create smart logic for when downloaded weather data automatically refreshes
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE

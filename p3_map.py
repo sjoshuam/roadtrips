@@ -1,3 +1,29 @@
+"""
+    Purpose: Generates html map displays to show information about the typical weather conditions
+        in each destination at different periods throughout the year (planning tool).  Also,
+        depicts information about past travels, including routes and visits.  This displays,
+        linked together with a slider bar, generate the core panel of this project's html page.
+    Inputs:
+        io_in/city_list.xlsx: provides information on the destinations I seek to visit and my
+            progress visiting them.
+        io_in/color.xlsx: centralized color palette for the project
+        io_in/Travels.kml: google earth kml file recording the routes traveled for each trip
+            as a line of coordinates.
+        io_mid/weather_data.xlsx: records the average number of temperate hours per day in each
+            destination for periods throughout the year.
+
+    Outputs:
+        io_mid/MAP.html: self-contained, fully-functional html file with all data displays.
+            Used during development to inspect data displays.  Is not tied into the project
+            css file, so some stylistic elements will be of lower quality.
+        io_mid/MAP.div: html code contained inside a <div> tag, suitable for injection into
+            the project's main html product.
+    Open GitHub Issues:
+        #9 Adjust intakes as needed to deconflict with the detailed weather panel page
+        #11 Refresh panel when miles-walked data is more complete
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+"""
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE
 

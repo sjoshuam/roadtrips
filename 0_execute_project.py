@@ -1,3 +1,22 @@
+"""
+    Purpose: Compiles all the .div outputs from other py modules into a single html page.
+        TODO: Make script trigger modules to run, instead of just passively reading div files
+    Inputs:
+        PROGRESS.div, PROXIMITY.div, MAP.div, OCONUS.div: output files containing the data
+            displays that will be showcased on the project's main html page.
+        roadtrips.css, roadtrips.html: the code for the project's main html page.  The div
+            outputs from other modules are injected into roadtrips.html
+        roadtrips.png: a manual snapshot of roadtrips.html with a 3:5 aspect ratio.  Serves as
+            the preview thumbnail for the project.
+    Outputs:
+        roadtrips.html: the project's main html page, with div element outputs from all other
+            modules injected into it.
+        Note: roadtrips.html, css, and png are copied over to ../portfolio where will be uploaded
+            periodically to sjoshuam.github.io as part of my portfolio of work.
+    Open GitHub Issues:
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+"""
 ##########==========##########==========##########==========##########==========##########==========
 ## HEADER
 
@@ -28,6 +47,9 @@ def inject_div(id, html, div_class):
 
 
 def export_html(html):
+    """
+        TODO
+    """
     open('io_out/roadtrips.html', 'wt').writelines(html)
     shutil.copyfile('io_in/roadtrips.css', 'io_out/roadtrips.css')
     shutil.copyfile('io_in/roadtrips.png', 'io_out/roadtrips.png')

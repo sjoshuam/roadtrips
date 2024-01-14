@@ -1,5 +1,20 @@
 """
-    TODO
+    Purpose: Depicts the four destinations outside the contiguous United States (in DC parlance,
+        those destinations are OCONUS) as well as a map key. Packge visualization so it can
+        slot into a div section within the project's main html page.
+    Inputs: 
+        p3_map: imports functions function p3_map in order to keep the two displays synced.
+        io_in/color.xlsx: centralized color palette for the project
+    Outputs:
+        io_mid/OCONUS.html: self-contained, fully-functional html file with all data displays.
+            Used during development to inspect data displays.  Is not tied into the project
+            css file, so some stylistic elements will be of lower quality.
+        io_mid/OCONUS.div: html code contained inside a <div> tag, suitable for injection into
+            the project's main html product.
+    Open GitHub Issues:
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+        #21 Rerender dots are part of the main panel and make this one purely a centralized key.
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE

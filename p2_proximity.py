@@ -1,5 +1,23 @@
 """
-    TODO
+    Purpose: Place destinations into hierarchical groups that are close together and depict
+        those relationships visually.  This provides a planning tool for future roadtrips. In
+        general, the closer destinations are, the more suitable they are for being visited in
+        the same trip.  Packge visualization so it can slot into a div section within
+        the project's main html page.
+    Inputs:
+        io_in/city_list.xlsx: provides information on the destinations I seek to visit and my
+            progress visiting them.
+    Outputs:
+        io_mid/PROXIMITY.html: self-contained, fully-functional html file with all data displays.
+            Used during development to inspect data displays.  Is not tied into the project
+            css file, so some stylistic elements will be of lower quality.
+        io_mid/PROXIMITY.div: html code contained inside a <div> tag, suitable for injection into
+            the project's main html product.
+    Open GitHub Issues:
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+        #19 Tie colors into centralized color scheme where possible (proximity uses a unique
+            rainbow pallete, but can still be synced more).
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE

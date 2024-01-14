@@ -1,5 +1,25 @@
 """
-    TODO
+    Purpose: Tally basic statistics on progress achieving travel goals and depict as html-based
+        visualizations.  Packge visualization code so it can slot into a div section within
+        the project's main html page.
+    Inputs:
+        io_in/city_list.xlsx: provides information on the destinations I seek to visit and my
+            progress visiting them.
+        io_in/color.xlsx: centralized color palette for the project
+    Outputs:
+        io_mid/PROGRESS.html: self-contained, fully-functional html file with all data displays.
+            Used during development to inspect data displays.  Is not tied into the project
+            css file, so some stylistic elements will be of lower quality.
+        io_mid/PROGRESS.div: html code contained inside a <div> tag, suitable for injection into
+            the project's main html product.
+        io_mid/STATS.txt: plain text file containing statistics to be injected into the text of
+            the project's main html product.  Currently, only used to modify one sentence.
+    Open GitHub Issues:
+        #2 Resolve a minor code weakpoint arising from PR being both not a state and part of the
+            contiguous USA.  Currently doesn't cause problems; this is just preventative.
+        #14 Add doc strings to all functions
+        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE
