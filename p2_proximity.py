@@ -260,7 +260,8 @@ def label_nodes(trace_dict, leaf_nodes, merge_nodes):
         hoverlabel = dict(
             align = 'left',
             font_color = merge_nodes.loc[idx, 'color_line'],
-            bgcolor = merge_nodes.loc[idx, 'color_fill']
+            bgcolor = merge_nodes.loc[idx, 'color_fill'],
+            bordercolor = merge_nodes.loc[idx, 'color_line'],
             ),
         marker = dict(
             line = dict(color = merge_nodes.loc[idx, 'color_line'], width = 1.5),
@@ -282,7 +283,8 @@ def label_nodes(trace_dict, leaf_nodes, merge_nodes):
         hoverlabel = dict(
             align = 'left',
             font_color = merge_nodes.loc[idx, 'color_line'],
-            bgcolor = merge_nodes.loc[idx, 'color_fill']
+            bgcolor = merge_nodes.loc[idx, 'color_fill'],
+            bordercolor = merge_nodes.loc[idx, 'color_line'],
             ),
         marker = dict(
             line = dict(color = merge_nodes.loc[idx, 'color_line'], width = 1.5),
