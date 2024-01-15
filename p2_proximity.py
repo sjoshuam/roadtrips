@@ -32,7 +32,7 @@ from pyproj import Proj
 
 ## set parameters
 params = dict(
-    width = 1300 - 10, height = 720 - 10,
+    width = 1200 - 10, height = 720 - 10,
     figure_colors = dict(
         bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
     too_high = 2400,
