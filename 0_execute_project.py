@@ -46,15 +46,16 @@ def inject_div(id, html, div_class):
     return html
 
 
-def export_html(html):
+def export_html(html, project_name = 'roadtrips'):
     """
         TODO
     """
-    open('io_out/roadtrips.html', 'wt').writelines(html)
-    shutil.copyfile('io_in/roadtrips.css', 'io_out/roadtrips.css')
-    shutil.copyfile('io_in/roadtrips.png', 'io_out/roadtrips.png')
+    open('io_out/{0}.html'.format(project_name), 'wt').writelines(html)
+    shutil.copyfile('io_in/{0}.css'.format(project_name), 'io_out/{0}.css'.format(project_name))
+    shutil.copyfile('io_in/{0}.png'.format(project_name), 'io_out/{0}.png'.format(project_name))
     for iter_ext in ['html', 'png', 'css']:
-        shutil.copyfile(f'io_out/roadtrips.{iter_ext}', f'../portfolio/p/roadtrips.{iter_ext}')
+        shutil.copyfile(
+            f'io_out/{project_name}.{iter_ext}', f'../portfolio/p/{project_name}.{iter_ext}')
     return None
 
 ##########==========##########==========##########==========##########==========##########==========
