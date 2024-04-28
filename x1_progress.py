@@ -26,9 +26,14 @@ import plotly.graph_objects as go
 
 ## set parameters
 params = {
-    'margin': 2**5,
+    'margin': 2**0,#5,
     'initial_slider': 'By Region',
-    'dimensions': (750 - 10, 392 - 10)
+    'dimensions': (750 - 10, 392 - 10),
+    'shading': { ## TODO: replace this!!!
+        'border': {'Photographed':'L', 'Visited':'LM', 'Unvisited':'M', 'EMPTY': 'S'},
+        'fill':   {'Photographed':'LM', 'Visited':'M', 'Unvisited':'S', 'EMPTY': 'S'}
+    },
+    'status_order': {'Photographed':2,'Visited':1,'Unvisited':0}
 }
 
 ##########==========##########==========##########==========##########==========##########==========
@@ -78,16 +83,17 @@ def write_stats(city_list):
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS: Render waffle chart visualizations
 
-def make_waffle(var, dim, city_list, colors):
+def make_waffle(var, dim, city_list, colors, params=params):
     """
         TODO
     """
 
     ## create coordinates for each box
-    waffle_data = pd.DataFrame({'x':range(0, dim[0])})
-    waffle_data = waffle_data.merge(pd.Series(range(0, dim[1]), name = 'y'), how = 'cross')
-    waffle_data['x'] = (waffle_data['x'] / dim[0]).round(3)
-    waffle_data['y'] = (waffle_data['y'] / dim[1]).round(3)
+    waffle_data = pd.DataFrame({'x':range(1, dim[0]+1)})
+    waffle_data = waffle_data.merge(pd.Series(range(1, dim[1]+1), name = 'y'), how = 'cross')
+    waffle_data['x'] = (waffle_data['x'] / (dim[0] + 1)).round(3)
+    waffle_data['y'] = (waffle_data['y'] / (dim[1] + 1)).round(3)
+    waffle_data['x'] = waffle_data['x'] * 0.8
     waffle_data = waffle_data.sort_values(['x', 'y'])
 
     ## create empty slots for needed data
@@ -97,10 +103,10 @@ def make_waffle(var, dim, city_list, colors):
     waffle_data['unused'] = True
 
     ## enhance city list
-    city_list['count_status']=city_list['status'].replace({'Photographed':2,'Visited':1,'Unvisited':0})
+    city_list['count_status'] = city_list['status'].replace(params['status_order'])
     city_list = city_list.merge(
             city_list[var].value_counts(), how = 'left', left_on = var, right_index = True)
-    city_list=city_list.sort_values(['count', 'count_status', 'city'], ascending=[False,False,True])
+    city_list=city_list.sort_values(['count_status', 'count', 'city'], ascending=[False,False,True])
 
     ## label cells, looping through each city
     var_then = city_list.at[city_list.index[0], var]
@@ -123,10 +129,8 @@ def make_waffle(var, dim, city_list, colors):
         var_then = var_now
 
     ## assign colors
-    waffle_data['border'] = waffle_data['status'].replace(
-        {'Photographed':'L', 'Visited':'LM', 'Unvisited':'M', 'EMPTY': 'MS'})
-    waffle_data['fill'] = waffle_data['status'].replace(
-        {'Photographed':'LM', 'Visited':'M', 'Unvisited':'MS', 'EMPTY': 'S'})
+    waffle_data['border'] = waffle_data['status'].replace(params['shading']['border'])
+    waffle_data['fill'] = waffle_data['status'].replace(params['shading']['fill'])
     for iter_row in waffle_data.index:
         waffle_data.at[iter_row, 'border'] = colors.at[
             waffle_data.at[iter_row, 'border'], waffle_data.at[iter_row, 'var']]
@@ -138,32 +142,68 @@ def make_waffle(var, dim, city_list, colors):
     ## clean up and return results
     del waffle_data['unused']
     waffle_data = waffle_data.sort_values(['x', 'y'])
-    print(waffle_data)
     return waffle_data
 
+
+def make_label(waffle_data, params=params):
+    """
+        TODO
+    """
+    ## set boundary conditions on legend
+    y_values= list(reversed(sorted(waffle_data['y'].unique())))[1::]
+    test_values = {
+        'var': len(waffle_data['var'].unique()),
+        'status': len(waffle_data['status'].unique()),
+        'y': len(y_values)
+    }
+    assert test_values['status'] <= test_values['y'], 'Too many categories (status)'
+    assert test_values['var'] <= test_values['y'], 'Too many categories (var)'
+
+    ## prep waffle_data for filtering
+    label_data= waffle_data.copy().drop(columns=['x','label'])
+    label_data['status_order']= label_data['status'].replace(params['status_order'])
+    label_data= label_data.sort_values(['status_order','y'], ascending=False)
+    label_data= label_data.loc[label_data['status'] != '', label_data.columns != 'y']
+
+    ## find unique status and var
+    idx_status = label_data.loc[label_data['var'] == label_data.loc[0,'var']].copy()
+    idx_status = idx_status.loc[~idx_status['status'].duplicated()].index.values
+    idx_var = label_data.loc[~label_data['var'].duplicated()].index.values
+    label_data['type'] = 0
+    label_data.loc[idx_status, 'type'] += 1
+    label_data.loc[idx_var, 'type']    += 3
+    label_data = label_data.loc[label_data['type'] > 0]
+    label_data['type'] = label_data['type'].replace({4:2})
+
+    ## assign y coordinates
+    label_data['xy'] = 0.
+    label_data.loc[label_data['type'] < 3,'y'] = y_values[0:sum(label_data['type'] < 3)]
+    label_data.loc[label_data['type'] > 1,'y'] = y_values[0:sum(label_data['type'] > 1)]
+
+    ## assign x coordinates
+    label_data = label_data.loc[[label_data.index.tolist()[0]]+label_data.index.tolist()]
+    label_data.loc[label_data['type'] == 2,'type'] = [1,3]
+    label_data['x'] = label_data['type'].replace({3:0.9, 1:1.3})
+
+    ## assign labels
+    label_data['label']= label_data['status']
+    label_data.loc[label_data['type']==3,'label']= label_data.loc[label_data['type']==3,'var']
+
+    return label_data.reset_index(drop=True)
+
+
+def calculate_stats():
+    """
+        TODO
+    """
+    print('TODO: COMPLETE STATISTICS FUNCTION; ADD TO LABELS')
+    return None
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS: Draw Figure
 
-def draw_waffle(waffle):
-    """
-        TODO
-    """
-    trace = go.Scatter(
-        x = waffle['x'],
-        y = waffle['y'],
-        mode = 'markers',
-        hovertext = waffle['label'],
-        marker = dict(
-            color = waffle['fill'], size = 24, symbol = 'square',
-            line = dict(width = 3, color= waffle['border'])
-            ),
-        #hoverlabel = waffle['label']
 
-    )
-    return trace
-
-def make_figure(params = params):
+def make_figure(params=params):
     """
         TODO
     """
@@ -180,32 +220,110 @@ def make_figure(params = params):
             t = params['margin'],
             b = params['margin']
             ),
-        #legend_title_text = 'KEY: Destinations',
-        dragmode = False,
-        #legend = dict(x = 0)
+        xaxis = dict(
+            range = (0, params['dimensions'][0]/params['dimensions'][1]),
+            visible = False
+            ),
+        yaxis = dict(
+            range = (0, 1),
+            visible = False
+            ),
+        dragmode = False
 
     )
     return fig
 
-'''
 
-def write_figure(fig, trace_dict, slider_bar):
+def write_figure(fig, trace_dict, slider = None):
     """
         TODO
     """
     fig = fig.add_traces([trace_dict[i] for i in trace_dict.keys()])
-    fig = fig.update_layout(sliders = slider_bar)
+    fig = fig.update_layout(sliders = slider)
     fig.write_html('io_mid/PROGRESS.html', full_html = True, include_plotlyjs = True)
     fig.write_html('io_mid/PROGRESS.div', full_html = False, include_plotlyjs = False)
     div = '\n'.join(open('io_mid/PROGRESS.div', 'rt').readlines())
     return div
 
-'''
+
+def draw_waffle(name, waffle, trace_dict, size=20, visible=False):
+    """
+        TODO
+    """
+
+    trace = go.Scatter(
+        x= waffle['x'],
+        y= waffle['y'],
+        mode= 'markers',
+        text= waffle['label'] + '<br>' + name.title() + ': ' + waffle['var'],
+        customdata= waffle['status'],
+        hovertemplate= '%{text}<br>Status: %{customdata}<extra></extra>',
+        marker= dict(
+            color= waffle['fill'], size=size, symbol = 'square',
+            line= dict(width=2, color=waffle['border'])),
+        showlegend= False,
+        visible = visible
+    )
+    trace_dict.update({name + '∆waffle':trace})
+
+    return trace_dict
+
+
+def draw_legend(name, legend, trace_dict, colors, size=20, visible=False):
+    """
+        TODO
+    """
+    trace = go.Scatter(
+        x= legend['x'],
+        y= legend['y'],
+        mode= 'markers+text',
+        text= legend['label'],
+        textfont= dict(color=colors.loc['L','grey']),
+        textposition= 'middle right',
+        hoverinfo= 'skip',
+        marker= dict(
+            color= legend['fill'], size=size, symbol = 'square',
+            line= dict(width=2, color=legend['border'])),
+        showlegend= False,
+        visible = visible
+    )
+    trace_dict.update({name + '∆legend':trace})
+
+    return trace_dict
+
+
+def add_slider(trace_dict, colors, order=['Total','Region','Criteria']):
+    """
+        TODO
+    """
+
+    ## generate visibility information
+    if order is None: visible= list(set([i.split('∆')[0] for i in trace_dict.keys()]))
+    else: visible= order
+    visible= {i:[j.startswith(i) for j in trace_dict.keys()] for i in visible}
+
+    ## package visibility information in step format
+    for iter_step in visible.keys():
+        visible[iter_step] = dict(
+            method= 'update',
+            label = iter_step,
+            args = [dict(visible=visible[iter_step])]
+        )
+    visible = [visible[i] for i in visible.keys()]
+
+    ## package visibility information in slider format
+    slider = [dict(
+        font = dict(size = 10, color = colors.loc['L','grey']),
+        currentvalue=dict(font = dict(size = 12), prefix='Destinations Visited: '),
+        active = 0, steps = visible, pad = dict(b=0, l=8, r=8, t=0)
+        )]
+
+    return slider
 
 ##########==========##########==========##########==========##########==========##########==========
 ## TOP-LEVEL FUNCTIONS
 
-def draw_progress_panel():
+def draw_figure():
     """
         TODO
     """
@@ -217,36 +335,39 @@ def draw_progress_panel():
     ##progress = refine_data(city_list)
     
     ## generate waffle data
-    region_waffle = make_waffle(var= 'region', dim= (15, 8), city_list= city_list, colors= colors)
-    status_waffle = make_waffle(var= 'one', dim= (15, 8), city_list= city_list, colors= colors)
-    criteria_waffle = make_waffle(
-        var= 'state_criteria', dim= (15, 8), city_list= city_list, colors= colors)
+    status_waffle=   make_waffle(var='one', dim=(11,11), city_list=city_list, colors=colors)
+    region_waffle=   make_waffle(var='region', dim=(11,11), city_list=city_list, colors=colors)
+    criteria_waffle= make_waffle(var='state_criteria', dim=(11,11), city_list=city_list, colors=colors)
     
-    fig = make_figure()
-    fig = fig.add_trace(draw_waffle(criteria_waffle))
-    fig.write_html('io_mid/waffle_TEST.html', full_html = True, include_plotlyjs = True)
-
-
-
-    '''
-    ## generate map traces
-    fig = make_figure(city_list)
-    trace_dict = dict()
-    trace_dict = draw_region_bars(city_list= city_list, progress= progress, trace_dict= trace_dict)
-    trace_dict = draw_bars(progress, trace_dict = trace_dict)
-    slider_bar = draw_slider(trace_dict)
+    ## generate legend data
+    status_legend=   make_label(waffle_data=status_waffle)
+    region_legend=   make_label(waffle_data=region_waffle)
+    criteria_legend= make_label(waffle_data=criteria_waffle)
 
     ## draw figure
-    div = write_figure(fig, trace_dict, slider_bar)
+    trace_dict= dict()
+    trace_dict= draw_waffle(name='Total', waffle=status_waffle, trace_dict=trace_dict, visible=True)
+    trace_dict= draw_waffle(name='Region', waffle=region_waffle, trace_dict=trace_dict)
+    trace_dict= draw_waffle(name= 'Criteria', waffle=criteria_waffle, trace_dict=trace_dict)
 
-    return div
-    '''
+    ## draw legend
+    trace_dict= draw_legend(name='Total', legend=status_legend, trace_dict=trace_dict, colors=colors, visible=True)
+    trace_dict= draw_legend(name='Region', legend=region_legend, trace_dict=trace_dict, colors=colors)
+    trace_dict= draw_legend(name='Criteria', legend=criteria_legend, trace_dict=trace_dict, colors=colors)
+
+    ## add slider
+    slider= add_slider(trace_dict, colors=colors)
+    calculate_stats()
+
+    ## write figure
+    fig = make_figure()
+    write_figure(fig=fig, trace_dict=trace_dict, slider=slider)
 
 
 ##########==========##########==========##########==========##########==========##########==========
 ## CODE TESTS
 
 if __name__ == '__main__':
-    draw_progress_panel()
+    draw_figure()
 
 ##########==========##########==========##########==========##########==========##########==========
