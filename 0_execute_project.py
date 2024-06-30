@@ -1,6 +1,7 @@
 """
     Compiles all the .div outputs from other py modules into a single html page and exports files
         to the portfolio project's code directory for upload to the github.io website.
+        See params to True to generate the weather data and html divs used to build this page.
     Inputs:
         PROGRESS.div, PROXIMITY.div, MAP.div, OCONUS.div: output files containing the data
             displays that will be showcased on the project's main html page.
@@ -20,6 +21,7 @@
 ## HEADER
 
 params = dict(
+    download_weather_data = True,
     regenerate_divs = True
 )
 
@@ -28,6 +30,8 @@ import shutil, os
 import pandas as pd
 
 ## functions needed to regenerate the div files injected into the data dashboard
+if params['download_weather_data']:
+    from d1_weather import download_weather_data
 if params['regenerate_divs']:
     from p1_progress import draw_progress_panel
     from p2_proximity import draw_proximity_panel
@@ -121,13 +125,26 @@ def export_outputs(html_str: str, project_name = 'roadtrips') -> str:
 ## DEFINE TOP-LEVEL FUNCTIONS
 
 
-def regenerate_divs(execute = params['regenerate_divs']):
-    """Executes all of the models that generate div-formatted Plotly figures"""
-    if execute:
+def regenerate_dashboard_components(params = params):
+    """ Function regenerates the data and files that functions in this module use to construct
+    the data databoard
+    Inputs: params = determines which components to generate
+    Results:
+        download_weather_data = downloads data from NOAA to the io_mid/weather_data directory
+            and then calculates summary statistics to io_mid/weather_data.xlsx
+        regenerate_divs = generates div-formatted Plotly figures used to construct the databoard
+    """
+    if params['download_weather_data']:
+        print('Downloading weather data...')
+        download_weather_data()
+        print('...Done')
+    if params['regenerate_divs']:
+        print('Regenerating div files...')
         draw_progress_panel()
         draw_proximity_panel()
         draw_map_panel()
         draw_oconus_panel()
+        print('...Done')
     return None
 
 
@@ -155,7 +172,7 @@ def construct_roadtrip_dashboard():
 
 
 if __name__ == '__main__':
-    regenerate_divs()
+    regenerate_dashboard_components()
     html_str = construct_roadtrip_dashboard()
 
 
