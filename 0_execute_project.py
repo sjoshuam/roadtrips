@@ -158,7 +158,7 @@ def construct_roadtrip_dashboard():
     html_str = fill_in_statistics(html_str = html_str)
 
     ## inject plotly figures into the empty divs, so that web page renders an interactive dashboard
-    html_str = inject_div(id = 'PROGRESS',  html_str = html_str, div_class = 'facet_panel' )
+    html_str = inject_div(id = 'PROGRESS',  html_str = html_str, div_class = 'progress_panel' )
     html_str = inject_div(id = 'MAP',       html_str = html_str, div_class = 'main_panel'  )
     html_str = inject_div(id = 'OCONUS',    html_str = html_str, div_class = 'oconus_panel')
     html_str = inject_div(id = 'PROXIMITY', html_str = html_str, div_class = 'bottom_panel')

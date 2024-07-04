@@ -4,18 +4,17 @@
         the project's main html page.
     Inputs:
         io_in/city_list.xlsx: provides information on the destinations I seek to visit and my
-            progress visiting them.
-        io_in/color.xlsx: centralized color palette for the project
+            progress visiting them.  Also provides information on color schema for figures.
     Outputs:
         io_mid/PROGRESS.html: self-contained, fully-functional html file with all data displays.
             Used during development to inspect data displays.  Is not tied into the project
             css file, so some stylistic elements will be of lower quality.
         io_mid/PROGRESS.div: html code contained inside a <div> tag, suitable for injection into
             the project's main html product.
-        io_mid/STATS.txt: plain text file containing statistics to be injected into the text of
-            the project's main html product.  Currently, only used to modify one sentence.
-
+    Open GitHub Issues:
+        # None.  This file is good to go.
 """
+
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE
 
@@ -27,9 +26,8 @@ import plotly.graph_objects as go
 ## set parameters
 params = {
     'margin': 2**0,#5,
-    'initial_slider': 'By Region',
-    'dimensions': (750 - 10, 392 - 10),
-    'shading': { ## TODO: replace this!!!
+    'dimensions': (700 - 10, 392 - 10),
+    'shading': {
         'border': {'Photographed':'L', 'Visited':'LM', 'Unvisited':'M', 'EMPTY': 'S'},
         'fill':   {'Photographed':'LM', 'Visited':'M', 'Unvisited':'S', 'EMPTY': 'S'}
     },
@@ -42,9 +40,9 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 ## COMPONENT FUNCTIONS: Manipulate City Visit Data
 
 
-def import_data():
-    """
-        TODO
+def import_data() -> pd.DataFrame:
+    """Import primary dataset (city_list) from xlsx and construct useful columns.
+    output: city_list = a dataset of information about the cities on my travel list.
     """
 
     ## import and merge data
@@ -59,9 +57,10 @@ def import_data():
     return city_list
 
 
-def import_color():
-    """
-        TODO
+def import_color() -> pd.DataFrame:
+    """Import color scheme, which is packaged in two tabs within the main city_list file.
+    output: a matrix of colors, specified in hsva format.  Function use this file to 
+        determine which colors on the plot.
     """
     colors = pd.read_excel('io_in/city_list.xlsx', sheet_name = "Color", index_col = 0)
     color_map = pd.read_excel('io_in/city_list.xlsx', sheet_name = "ColorMap").dropna()
@@ -73,10 +72,22 @@ def import_color():
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS: Render waffle chart visualizations
 
-def make_waffle(var, dim, city_list, colors, params=params):
+
+def make_waffle(var:str, city_list:pd.DataFrame, colors:pd.DataFrame, params=params) -> pd.DataFrame:
+    """Generates a pd.DataFrame with all the data necessary to draw a waffle plot, including
+    colors, coordinates, and labels.
+    Input:
+        var = column name in city_list defining the groups for the plot
+        city_list = city-wise dataframe (primary data object for this script)
+        colors = matrix defining the color scheme for plots. The groups specified in var match
+            columns in the color file
+        params = dict of misc. parameters
     """
-        TODO
-    """
+
+    ## determine the dimensions for the plot
+    dim = city_list.shape[0]**0.5
+    dim = (dim // 1) + int((dim % 1) > 0)
+    dim = (int(dim), int(dim))
 
     ## create coordinates for each box
     waffle_data = pd.DataFrame({'x':range(1, dim[0]+1)})
@@ -86,7 +97,6 @@ def make_waffle(var, dim, city_list, colors, params=params):
     waffle_data['x'] = waffle_data['x'] * 0.8
     waffle_data = waffle_data.sort_values(['x', 'y'], ascending=[True, False])
     waffle_data = waffle_data.reset_index(drop=True)
-    waffle_data.to_excel('~/Desktop/test.xlsx')
 
     ## create empty slots for needed data
     waffle_data['label'] = 'EMPTY'
@@ -146,9 +156,12 @@ def make_waffle(var, dim, city_list, colors, params=params):
     return waffle_data
 
 
-def make_label(waffle_data, params=params):
-    """
-        TODO
+def make_legend(waffle_data: pd.DataFrame, params=params) -> pd.DataFrame:
+    """ The color scheme for the waffle plot is based on the two variables, requiring a customized
+    legend.  This function generates a dataframe with all the information needed to draw it.
+    Inputs:
+        waffle_data = dataframe with all the information need to draw a waffle plot.
+        params = dict of misc. parameters
     """
     ## set boundary conditions on legend
     y_values= list(reversed(sorted(waffle_data['y'].unique())))[1::]
@@ -161,45 +174,46 @@ def make_label(waffle_data, params=params):
     assert test_values['var'] <= test_values['y'], 'Too many categories (var)'
 
     ## prep waffle_data for filtering
-    label_data= waffle_data.copy().drop(columns=['x','label'])
-    label_data['status_order']= label_data['status'].replace(params['status_order'])
-    label_data= label_data.sort_values(['order', 'status_order','y'], ascending=False)
-    label_data= label_data.loc[label_data['status'] != '', label_data.columns != 'y']
+    legend_data= waffle_data.copy().drop(columns=['x','label'])
+    legend_data['status_order']= legend_data['status'].replace(params['status_order'])
+    legend_data= legend_data.sort_values(['order', 'status_order','y'], ascending=False)
+    legend_data= legend_data.loc[legend_data['status'] != '', legend_data.columns != 'y']
 
     ## find unique status and var
-    idx_status = label_data.loc[label_data['var'] == label_data.loc[0,'var']].copy()
+    idx_status = legend_data.loc[legend_data['var'] == legend_data.loc[0,'var']].copy()
     idx_status = idx_status.loc[~idx_status['status'].duplicated()].index.values
-    idx_var = label_data.loc[~label_data['var'].duplicated()].index.values
-    label_data['type'] = 0
-    label_data.loc[idx_status, 'type'] += 1
-    label_data.loc[idx_var, 'type']    += 3
-    label_data = label_data.loc[label_data['type'] > 0]
-    label_data['type'] = label_data['type'].replace({4:2})
+    idx_var = legend_data.loc[~legend_data['var'].duplicated()].index.values
+    legend_data['type'] = 0
+    legend_data.loc[idx_status, 'type'] += 1
+    legend_data.loc[idx_var, 'type']    += 3
+    legend_data = legend_data.loc[legend_data['type'] > 0]
+    legend_data['type'] = legend_data['type'].replace({4:2})
 
     ## assign y coordinates
-    label_data['xy'] = 0.
-    label_data.loc[label_data['type'] < 3,'y'] = y_values[0:sum(label_data['type'] < 3)]
-    label_data.loc[label_data['type'] > 1,'y'] = y_values[0:sum(label_data['type'] > 1)]
+    legend_data['xy'] = 0.
+    legend_data.loc[legend_data['type'] < 3,'y'] = y_values[0:sum(legend_data['type'] < 3)]
+    legend_data.loc[legend_data['type'] > 1,'y'] = y_values[0:sum(legend_data['type'] > 1)]
 
     ## assign x coordinates
-    label_data = label_data.loc[[label_data.index.tolist()[0]]+label_data.index.tolist()]
-    label_data.loc[label_data['type'] == 2,'type'] = [1,3]
-    label_data['x'] = label_data['type'].replace({3:0.9, 1:1.3})
+    legend_data = legend_data.loc[[legend_data.index.tolist()[0]]+legend_data.index.tolist()]
+    legend_data.loc[legend_data['type'] == 2,'type'] = [1,3]
+    legend_data['x'] = legend_data['type'].replace({3:0.9, 1:1.3})
 
     ## assign labels
-    label_data['label']= label_data['status']
-    label_data.loc[label_data['type']==3,'label']= label_data.loc[label_data['type']==3,'var']
+    legend_data['label']= legend_data['status']
+    legend_data.loc[legend_data['type']==3,'label']= legend_data.loc[legend_data['type']==3,'var']
 
-    return label_data.reset_index(drop=True)
+    return legend_data.reset_index(drop=True)
 
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS: Draw Figure
 
 
-def make_figure(params=params):
-    """
-        TODO
+def make_figure(params=params) -> go.Figure:
+    """ Initialize an empty plotly object, so that write_figure can append visualization traces
+    to it and write it to disk as html code (a div)
+    Input: params = misc. parameters
     """
     fig = go.Figure()
     fig = fig.update_layout(
@@ -227,9 +241,14 @@ def make_figure(params=params):
     return fig
 
 
-def write_figure(fig, trace_dict, slider=None):
-    """
-        TODO
+def write_figure(fig: go.Figure, trace_dict: dict, slider=None) -> str:
+    """ Add sliders and traces to a plotly figure.  Write figure as both a self-contained html
+    file and also as an html div section.  The self-contained file is for testing / trouble-
+    shooting.  0_executve_project.py injects the div code into a data dashboard.
+    Inputs:
+        fig = An empty plotly figure
+        trace_dict =  a dict of plotly traces, which are added to fig
+        slider = plotly slider specifications, which are also added to fig
     """
     fig = fig.add_traces([trace_dict[i] for i in trace_dict.keys()])
     fig = fig.update_layout(sliders = slider)
@@ -239,9 +258,21 @@ def write_figure(fig, trace_dict, slider=None):
     return div
 
 
-def draw_waffle(name, waffle, trace_dict, size=20, visible=False):
-    """
-        TODO
+def draw_waffle(name:str, waffle:pd.DataFrame, trace_dict:dict, size=20, visible=False) -> dict:
+    """ Draws a waffle plot, using the plotly scatter plot function.  make_waffle() does all the
+    calculations in advance.  draw_waffle() supplies the output from make_waffle() to the scatter
+    plot function.  draw_waffle()'s output is a dict, ready to be appended to trace_dict, which
+    stores all traces until write_figure() can add them to the plotly figure object.
+    Inputs:
+        name = a string that will uniquely identify this trace within trace_dict.  Serves as part
+            of a dict key.
+        waffle = output of make_waffle(); contains all the data needed to draw the waffle plot.
+        trace_dict = A dict containing all of the plotly traces drawn so far.  draw_waffle() 
+            adds a new trace as a new key-value pair in the dict.
+        size = Size of the waffle squares; informs go.Scatter()'s marker size.
+        visible = boolean for whether the trace is visible.  The plotly figure employs
+            a slider bar, so that the user can toggle between multiple useful data visualizations.
+            The slider acts on this setting to make different elements visible or invisible.
     """
     
     ## render waffle plot (scatterplot of squares)
@@ -263,9 +294,22 @@ def draw_waffle(name, waffle, trace_dict, size=20, visible=False):
     return trace_dict
 
 
-def draw_legend(name, legend, trace_dict, colors, size=20, visible=False):
-    """
-        TODO
+def draw_legend(name:str, legend:pd.DataFrame, trace_dict:dict, colors:pd.DataFrame, size=20,
+                visible=False) -> dict:
+    """ Draws a waffle plot legend, using the plotly scatter plot function.  make_legend() does
+    the calculations in advance.  draw_legend() supplies the output from make_legend() to the
+    scatter plot function.  draw_legend()'s output is a dict, ready to be appended to trace_dict.
+    Inputs:
+        name = a string that will uniquely identify this trace within trace_dict.  Serves as part
+            of a dict key.
+        legend = output of make_legend(); contains all the data needed to draw the waffle legend.
+        trace_dict = A dict containing all of the plotly traces drawn so far. Functions adds a new
+            trace as a new key-value pair in the dict.
+        colors = dataframe defining the colors used in the figures.
+        size = Size of the waffle squares; informs go.Scatter()'s marker size.
+        visible = boolean for whether the trace is visible.  The plotly figure employs
+            a slider bar, so that the user can toggle between multiple useful data visualizations.
+            The slider acts on this setting to make different elements visible or invisible.
     """
     trace = go.Scatter(
         x= legend['x'],
@@ -286,9 +330,13 @@ def draw_legend(name, legend, trace_dict, colors, size=20, visible=False):
     return trace_dict
 
 
-def add_slider(trace_dict, colors, order=['Total', 'Criteria', 'Region',]):
-    """
-        TODO
+def add_slider(trace_dict:dict, colors:pd.DataFrame, order=['Total','Criteria','Region']) -> list:
+    """ Generates slider specifications for the plotly object.
+    Input:
+        trace_dict = A dict containing all of the plotly traces drawn so far. The slider controls
+            which traces are visible.
+        colors = dataframe defining the colors used in the figures.
+        order = Determines the order in which plots are listed in the figure's slider.
     """
 
     ## generate visibility information
@@ -314,39 +362,38 @@ def add_slider(trace_dict, colors, order=['Total', 'Criteria', 'Region',]):
 
     return slider
 
+
 ##########==========##########==========##########==========##########==========##########==========
 ## TOP-LEVEL FUNCTIONS
 
-def draw_progress_panel():
-    """
-        TODO
+
+def draw_progress_panel() -> None:
+    """ Executes all of the functions defined above.  Loaded in 0_execute_project.py in order
+    to execute the full project.
     """
 
     ## import and refine data
     city_list = import_data()
     colors = import_color()
-    #write_stats(city_list = city_list)  ## FIX THIS!!
-    ##progress = refine_data(city_list)
     
     ## generate waffle data
-    status_waffle   = make_waffle(var='one', dim=(11,11), city_list=city_list, colors=colors)
-    criteria_waffle = make_waffle(
-        var='state_criteria', dim=(11,11), city_list=city_list, colors=colors)
-    region_waffle   = make_waffle(var='region', dim=(11,11), city_list=city_list, colors=colors)
+    status_waffle   = make_waffle(var='one', city_list=city_list, colors=colors)
+    criteria_waffle = make_waffle(var='state_criteria', city_list=city_list, colors=colors)
+    region_waffle   = make_waffle(var='region', city_list=city_list, colors=colors)
     
     ## generate legend data
-    status_legend   = make_label(waffle_data=status_waffle)
-    region_legend   = make_label(waffle_data=region_waffle)
-    criteria_legend = make_label(waffle_data=criteria_waffle)
+    status_legend   = make_legend(waffle_data=status_waffle)
+    region_legend   = make_legend(waffle_data=region_waffle)
+    criteria_legend = make_legend(waffle_data=criteria_waffle)
 
-    ## draw figure
+    ## draw waffles
     trace_dict = dict()
     trace_dict = draw_waffle(
         name='Total', waffle=status_waffle, trace_dict=trace_dict, visible=True)
     trace_dict = draw_waffle(name='Criteria', waffle=criteria_waffle, trace_dict=trace_dict)
     trace_dict = draw_waffle(name='Region', waffle=region_waffle, trace_dict=trace_dict)
 
-    ## draw legend
+    ## draw legends
     trace_dict = draw_legend(
         name='Total', legend=status_legend, trace_dict=trace_dict, colors=colors, visible=True)
     trace_dict = draw_legend(
@@ -354,12 +401,13 @@ def draw_progress_panel():
     trace_dict = draw_legend(
         name='Region', legend=region_legend, trace_dict=trace_dict, colors=colors)
 
-    ## add slider
+    ## generate slider
     slider= add_slider(trace_dict, colors=colors)
 
-    ## write figure
+    ## attach waffles and legends to figure object, then write to disk as html div code
     fig = make_figure()
     write_figure(fig=fig, trace_dict=trace_dict, slider=slider)
+    return None
 
 
 ##########==========##########==========##########==========##########==========##########==========
