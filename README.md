@@ -19,13 +19,13 @@ fuse components together into a unified data display.  The components are:
 + d1_weather: Download NOAA weather data and compile it into information on the
         best time to visit each destination.
 + p1_progress: Tally basic statistics on progress achieving travel goals and depict
-        as html-based visualizations.  Packge visualization code so it can slot into
-        a div section within the project's main html page.
+        as html-based waffle-plot visualizations.  Packge visualization code so it
+        can slot into a div section within the project's main html page.
 + p2_proximity: Place destinations into hierarchical groups that are close together
         and depict those relationships visually.  This provides a planning tool for
         future roadtrips. In general, the closer destinations are, the more suitable
-        they are for being visited in the same trip.  Packge visualization so it can
-        slot into a div section within the project's main html page.
+        they are for being visited in the same trip.  Package dendrogram visualization
+        so it can slot into a div section within the project's main html page.
 + p3_map: Generates html map displays to show information about the typical weather
         conditions in each destination at different periods throughout the year
         (planning tool).  Also, depicts information about past travels, including
