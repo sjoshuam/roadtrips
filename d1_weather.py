@@ -165,7 +165,6 @@ def download_weather_data():
         TODO
     """
     weather_stations = import_weather_stations()
-    print(weather_stations)
     retrieve_weather_data(weather_stations = weather_stations)
     weather_data = refine_weather_data()
     return weather_data
