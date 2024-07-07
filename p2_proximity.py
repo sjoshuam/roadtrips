@@ -23,8 +23,8 @@ params = dict(
     perfect_day = 12,
     first_visible = '06_Jun (Mid)',
     shading = {
-        'border': {'Photographed':'L', 'Visited':'LM', 'Unvisited':'M', 'EMPTY': 'S'},
-        'fill':   {'Photographed':'LM', 'Visited':'M', 'Unvisited':'S', 'EMPTY': 'S'}
+        'border': {'Photographed':'M', 'Visited':'LM', 'Unvisited':'LM', 'EMPTY': 'S'},
+        'fill':   {'Photographed':'M', 'Visited':'MS', 'Unvisited':'S', 'EMPTY': 'S'}
         },
     )
 
@@ -64,11 +64,15 @@ def assign_colors(city_list:pd.DataFrame, colors:pd.DataFrame, params=params) ->
     """
     city_list['color_line'] = city_list['status'].replace(params['shading']['border'])
     city_list['color_fill'] = city_list['status'].replace(params['shading']['fill'])
+    city_list['highlight'] = 'main'
+    city_list.loc[city_list['status']=='Photographed', 'highlight'] = 'grey'
     for iter_row in city_list.index:
         city_list.loc[iter_row, 'color_line'] = colors.loc[
-            city_list.loc[iter_row, 'color_line'], city_list.loc[iter_row, 'region']]
+            city_list.loc[iter_row, 'color_line'], city_list.loc[iter_row, 'highlight']]
         city_list.loc[iter_row, 'color_fill'] = colors.loc[
-            city_list.loc[iter_row, 'color_fill'], city_list.loc[iter_row, 'region']]
+            city_list.loc[iter_row, 'color_fill'], city_list.loc[iter_row, 'highlight']]
+    city_list = city_list.drop(columns='highlight')
+    print(city_list)
     return city_list
 
 
@@ -155,7 +159,7 @@ def make_hierarchy_dendrogram(city_list:pd.DataFrame, linkage:pd.DataFrame, colo
     dendrogram[icoords] =  dendrogram[icoords] / dendrogram[icoords].max().max()
 
     ## formulate colors
-    dendrogram['color'] = colors.loc['LM', 'grey']
+    dendrogram['color'] = colors.loc['M', 'grey']
 
     return dendrogram
 
@@ -193,7 +197,7 @@ def extract_merge_nodes(hierarchy_dendrogram:pd.DataFrame, colors:pd.DataFrame, 
 
     ## formulate colors
     merge_nodes['color_line'] = colors.loc['LM','grey']
-    merge_nodes['color_fill'] = colors.loc['M','grey']
+    merge_nodes['color_fill'] = colors.loc['MS','grey']
     merge_nodes['label_type'] = 'hover'
     merge_nodes.loc[merge_nodes['dcoord'] >= params['label_height'], 'label_type'] = 'text'
     merge_nodes = merge_nodes.loc[merge_nodes['dcoord'] < params['too_high']]
