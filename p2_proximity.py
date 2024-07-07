@@ -15,18 +15,19 @@ from pyproj import Proj
 
 ## set parameters
 params = dict(
-    width = 1200 - 10, height = 720 - 10,
+    width = 1000 - 10, height = 900 - 10,
     figure_colors = dict(
-        bg= 'hsv(000,00,00)', fg= 'hsv(000,00,80)', mg= 'hsv(000,00,40)'),
+        bg='hsv(000,00,00)', fg='hsv(000,00,80)', mg='hsv(000,00,40)'),
     too_high = 2400,
     label_height = 250,
-    perfect_day = 12,
+    perfect_day = 11,
     first_visible = '06_Jun (Mid)',
     shading = {
-        'border': {'Photographed':'M', 'Visited':'LM', 'Unvisited':'LM', 'EMPTY': 'S'},
-        'fill':   {'Photographed':'M', 'Visited':'MS', 'Unvisited':'S', 'EMPTY': 'S'}
+        'border':{'Photographed':'M' , 'Visited':'LM', 'Unvisited':'LM', 'Bracket':'LM'},
+        'fill':  {'Photographed':'MS', 'Visited':'MS', 'Unvisited':'S' , 'Bracket':'M' }
         },
     )
+
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS - import and enrich data
@@ -48,7 +49,7 @@ def import_data(params = params) -> pd.DataFrame:
 
     ## import weather data and identify best months to visit each city
     weather_data = pd.read_excel(os.path.join('io_mid', 'weather_data.xlsx'), index_col=0)
-    best_quantile = weather_data.quantile(0.80, axis=0).values
+    best_quantile = weather_data.quantile(0.75, axis=0).values
     best_quantile = pd.DataFrame(
         data={i:best_quantile for i in weather_data.index}, index=weather_data.columns).T
     best_months = (weather_data >= best_quantile) | (weather_data >= params['perfect_day'])
@@ -72,7 +73,6 @@ def assign_colors(city_list:pd.DataFrame, colors:pd.DataFrame, params=params) ->
         city_list.loc[iter_row, 'color_fill'] = colors.loc[
             city_list.loc[iter_row, 'color_fill'], city_list.loc[iter_row, 'highlight']]
     city_list = city_list.drop(columns='highlight')
-    print(city_list)
     return city_list
 
 
@@ -158,8 +158,24 @@ def make_hierarchy_dendrogram(city_list:pd.DataFrame, linkage:pd.DataFrame, colo
     icoords = ['icoord' + str(i) for i in range(0, 4)]
     dendrogram[icoords] =  dendrogram[icoords] / dendrogram[icoords].max().max()
 
-    ## formulate colors
-    dendrogram['color'] = colors.loc['M', 'grey']
+    ## compile color information
+    dendrogram['color'] = colors.loc[params['shading']['border']['Bracket'], 'grey']
+    dendrogram = dendrogram.merge(
+        right=city_list[['city', 'color_line','status']].rename(
+            columns={'color_line':'left_color','status':'left_status'}),
+        how='left', left_on='left_name', right_on='city'
+        ).drop(columns='city')
+    dendrogram = dendrogram.merge(
+        right=city_list[['city', 'color_line', 'status']].rename(
+            columns={'color_line':'right_color','status':'right_status'}),
+        how='left', left_on='right_name', right_on='city'
+        ).drop(columns='city')
+    
+    ## determine line color
+    idx = (dendrogram['left_status'] != 'Photographed') & (~dendrogram['left_status'].isna())
+    dendrogram.loc[idx, 'color'] = dendrogram.loc[idx, 'left_color']
+    idx = (dendrogram['right_status'] != 'Photographed') & (~dendrogram['right_status'].isna())
+    dendrogram.loc[idx, 'color'] = dendrogram.loc[idx, 'right_color']
 
     return dendrogram
 
@@ -170,7 +186,7 @@ def extract_leaf_nodes(hierarchy_dendrogram:pd.DataFrame, city_list:pd.DataFrame
     """
     ## extract terminal node coordinates
     def get_node_coords(num, hd = hierarchy_dendrogram):
-        """X"""
+        """TODO"""
         i = [['left_name', '', '', 'right_name'][num]]
         i = i + ['icoord' + str(num), 'dcoord' + str(num)]
         hd = hd.copy()[i]
@@ -196,8 +212,8 @@ def extract_merge_nodes(hierarchy_dendrogram:pd.DataFrame, colors:pd.DataFrame, 
     merge_nodes['dcoord'] = hierarchy_dendrogram['dcoord1'].copy()
 
     ## formulate colors
-    merge_nodes['color_line'] = colors.loc['LM','grey']
-    merge_nodes['color_fill'] = colors.loc['MS','grey']
+    merge_nodes['color_line'] = colors.loc[params['shading']['border']['Bracket'],'grey']
+    merge_nodes['color_fill'] = colors.loc[params['shading']['fill']['Bracket'],  'grey']
     merge_nodes['label_type'] = 'hover'
     merge_nodes.loc[merge_nodes['dcoord'] >= params['label_height'], 'label_type'] = 'text'
     merge_nodes = merge_nodes.loc[merge_nodes['dcoord'] < params['too_high']]
@@ -367,8 +383,8 @@ def add_slider(trace_dict:dict, colors:pd.DataFrame) -> list:
     ## package visibility information in slider format
     slider = [dict(
         font = dict(size=10, color=colors.loc['L','grey']),
-        currentvalue=dict(font=dict(size = 12), prefix='Month: '),
-        active = 0, steps = visible, pad = dict(b=0, l=8, r=8, t=0)
+        currentvalue=dict(font=dict(size=12), prefix='Month: '),
+        active=5, steps=visible, pad=dict(b=0, l=8, r=8, t=0)
         )]
     return slider
 

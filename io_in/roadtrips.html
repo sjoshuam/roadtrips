@@ -118,20 +118,34 @@
 
 <!-- Proximity x Weather Tool -->
 <div class="bottom_text">
-    <p><b class = 'item'>Destination Distances</b></p>
+    <p><b class = 'item'>Roadtrip Planning Tool</b></p>
     <p>
-        The dendrogram panel on the right depicts the distances between destinations that I have
-        not yet visited and photographed. Trace the brackets between any pair of places.  The 
-        horizontal height of the lines between them roughly corresponds to the distance
-        between them.  Groups of destinations that all have short-horizontal connections between
-        them are good candidates for future travel routes.
+        The panel on the right is a planning tool for future trips.  Drag the slider bar at the
+        bottom to select the month in which the trip will occur.  For each month, the tool
+        shows the destinations that fall in the top quartile for temperate weather.  Bright,
+        colorful text and lines indicates places that I have not yet photographed, with other
+        places in dim grey.
+        <br><br>
+        The figure uses a dendrogram format to show which places are close to each other.  In a 
+        dendrogram, the horizontal length of lines indicates distance.  Trace the brackets between
+        any pair of places.  The combined horizontal length of the lines between them corresponds
+        rough to the distance between them. Groups of destinations that all have short-horizontal
+        connections between them are good candidates for future travel routes.
         <br><br>
         The dots in the middle of each bracket provide information on the group of destinations
         that the bracket represents.  Hover over each dot to see the place that is most central
         to all places in that group, plus the number of other places in the group. Where space
         permits, this information is also visible as text beside the dot.
         <br><br>
-        The next version of this figure will be an interactive planning tool. (GitHub Issue #22)
+        For example, imagine you wanted to build a road trip around traveling to Boston MA in
+        June.  On the chart, Boston MA is most closely connected to Providence RI.  Boston and 
+        Providence are closely connected to the two cities in New Hampshire.  Those four cities
+        are closely connected to the two cities in Maine.  Those six cities are closely connected
+        to the two cities in Vermont.  Therefore, you might plan a roadtrip route that passes 
+        through alll eight destinations.  While the dendrogram data visualization format takes
+        practice to master, it makes it easy to plan weather-appropriate, geographically-compact
+        trip itineraries.
+
 </div>
 <div class="bottom_panel"><insert>PROXIMITY</insert></div>
 
