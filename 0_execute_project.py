@@ -21,7 +21,7 @@
 ## HEADER
 
 params = dict(
-    download_weather_data = True,
+    download_weather_data = False,
     regenerate_divs = True
 )
 
