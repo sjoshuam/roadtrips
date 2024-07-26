@@ -3,7 +3,7 @@
         those destinations are OCONUS) as well as a map key. Packge visualization so it can
         slot into a div section within the project's main html page.
     Inputs: 
-        p3_map: imports functions function p3_map in order to keep the two displays synced.
+        b3_map: imports functions function b3_map in order to keep the two displays synced.
         io_in/color.xlsx: centralized color palette for the project
     Outputs:
         io_mid/OCONUS.html: self-contained, fully-functional html file with all data displays.
@@ -20,10 +20,11 @@
 ## INITIALIZE
 
 ## import packages
-import os
+import os, sys
+if not sys.prefix.endswith('.venv'): raise Exception('Virtual Environment Not Detected')  
 import pandas as pd
 import plotly.graph_objects as go
-import p3_map
+import b3_map
 
 ## define parameters
 params = dict()
@@ -32,7 +33,7 @@ params['height'] = 118 - 10
 params['color'] = pd.read_excel(os.path.join('io_in', 'colors.xlsx'), index_col = 0)
 params['visit_colors'] =  {'Photographed': 50, 'Visited': 25, 'Unvisited': 0}
 params['visit_borders'] = {'Photographed': 100, 'Visited': 50, 'Unvisited': 25}
-params['city_size'] = p3_map.params['city_size']
+params['city_size'] = b3_map.params['city_size']
 
 
 ##########==========##########==========##########==========##########==========##########==========
@@ -133,7 +134,7 @@ def draw_oconus_panel():
     """
         TODO
     """
-    city_list = p3_map.import_city_list()
+    city_list = b3_map.import_city_list()
     city_list = extract_oconus_data(city_list)
     fig = create_figure(city_list)
     trace_dict = build_oconus_trace(city_list)

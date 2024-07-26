@@ -1,14 +1,22 @@
-"""
-    TODO: Complete overhaul (search for TODOs further down)
-    TODO: Better dendrogram bracket color
+""" Determines which destinations have the least bad weather in each month and displays the 
+distances between them in dendrogram format.  These figures are a trip planning tool, enabling
+me to see at a glance where there are clusters of unphotographed locations currently experiencing
+the country's most decent weather.
+Input:
+    import_data() reads in destination-wise data on my past travels, as well as the color
+    pallette for this project.  Both are tabs in the io_in/city_list.xlsx spreadsheet.
+Output: write_figure() writes an html file to io_mid/PROMIXITY.div. the execute_project.py module
+    injects this code into an html data dashboard.
+Open GitHub Issues:
+    #22 refactor to streamline and pay down technical debt. (Low priority)
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE
 
 ## import packages
-import os
+import os, sys, datetime
+if not sys.prefix.endswith('.venv'): raise Exception('Virtual Environment Not Detected')  
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from scipy.cluster import hierarchy
 from pyproj import Proj
@@ -16,24 +24,26 @@ from pyproj import Proj
 ## set parameters
 params = dict(
     width = 1000 - 10, height = 900 - 10,
-    figure_colors = dict(
-        bg='hsv(000,00,00)', fg='hsv(000,00,80)', mg='hsv(000,00,40)'),
     too_high = 2400,
     label_height = 250,
-    perfect_day = 11,
-    first_visible = '06_Jun (Mid)',
+    first_visible = datetime.datetime.now().month + round(datetime.datetime.now().day/30.5),
     shading = {
         'border':{'Photographed':'M' , 'Visited':'LM', 'Unvisited':'LM', 'Bracket':'LM'},
-        'fill':  {'Photographed':'MS', 'Visited':'MS', 'Unvisited':'S' , 'Bracket':'M' }
+        'fill':  {'Photographed':'MS', 'Visited':'MS', 'Unvisited':'S' , 'Bracket':'MS' }
         },
     )
-
 
 ##########==========##########==========##########==========##########==========##########==========
 ## COMPONENT FUNCTIONS - import and enrich data
 
-def import_data(params = params) -> pd.DataFrame:
-    """Import data TODO
+def import_data() -> pd.DataFrame:
+    """ Imports a dataset of my travels plus the color palette for the project.  Both come from
+    tabs in the io_in/city_list.xlsx file.
+    Outputs:
+        city_list = destination-wise data on my travels and travel goals
+        best_months = a simplified matrix of weather data indicating cities are in top weather
+            quartile for each month.
+        colors = the color pallette for this project.
     """
     ## import color matrix
     colors = pd.read_excel('io_in/city_list.xlsx', sheet_name = "Color", index_col = 0)
@@ -52,7 +62,7 @@ def import_data(params = params) -> pd.DataFrame:
     best_quantile = weather_data.quantile(0.75, axis=0).values
     best_quantile = pd.DataFrame(
         data={i:best_quantile for i in weather_data.index}, index=weather_data.columns).T
-    best_months = (weather_data >= best_quantile) | (weather_data >= params['perfect_day'])
+    best_months = (weather_data >= best_quantile) & (weather_data >= 4)
 
     ## align weather data to city_list
     best_months = best_months.loc[city_list['noaa_station'].values]
@@ -61,7 +71,16 @@ def import_data(params = params) -> pd.DataFrame:
 
 
 def assign_colors(city_list:pd.DataFrame, colors:pd.DataFrame, params=params) -> pd.DataFrame:
-    """TODO
+    """ Allocates colors from the project color palette matrix to city_list.  Function assigns
+    each city the project's main color or main gray, depending on whether I have already 
+    photographed that destination.
+    Inputs:
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
+        colors = project's color palette matrix.  Projects the standard colors used across the
+            project.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
     city_list['color_line'] = city_list['status'].replace(params['shading']['border'])
     city_list['color_fill'] = city_list['status'].replace(params['shading']['fill'])
@@ -81,8 +100,12 @@ def assign_colors(city_list:pd.DataFrame, colors:pd.DataFrame, params=params) ->
 
 
 def project_coordinates(city_list: pd.DataFrame) -> pd.DataFrame:
-    """
-        TODO
+    """ scipy's dendrogram generation code does not filly support geographic coordinates. This
+    function converts destination coordinates to something approximating Euclidean coordinates
+    so that the scipy code can use Ward's method to determine linkages
+    Inputs:
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
     """
     project_lcc = Proj(proj = 'lcc +lon_0=-99.58 +lat_1=24.54 +lat_2=49.38', ellsp = 'WGS84')
     city_list['x'] = 0.0
@@ -98,8 +121,11 @@ def project_coordinates(city_list: pd.DataFrame) -> pd.DataFrame:
 
 
 def make_hierarchy_linkage(city_list: pd.DataFrame) -> pd.DataFrame:
-    """
-        TODO
+    """ Calculates the hierarchy of merges that clusters my travel destinations into geographically
+    proximate groups.
+    Inputs:
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
     """
     city_names = {i:city_list['city'].iat[i] for i in range(0, city_list.shape[0])}
     linkage = hierarchy.linkage(y = city_list[['x', 'y']], method = 'ward', optimal_ordering = True)
@@ -112,8 +138,14 @@ def make_hierarchy_linkage(city_list: pd.DataFrame) -> pd.DataFrame:
 
 
 def name_composite_nodes(city_list: pd.DataFrame, linkage: pd.DataFrame) -> pd.DataFrame:
-    """
-        TODO
+    """ Recevies a hierarchy of merges that clusters my travel destinations into geographically
+    proximate groups from make_hierarchy_linkage(). Generates names for each merge group, based
+    on the most central city in each group.
+    Inputs:
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
+        linkage = a merge hierarchy that lumps destinations into sucessfully larger groups based
+            on geographic proximity.  Is the output from make_hierarchy_linkage()
     """
     ## compile all cities for each merge
     linkage['up_name'] = ''
@@ -140,8 +172,17 @@ def name_composite_nodes(city_list: pd.DataFrame, linkage: pd.DataFrame) -> pd.D
 
 def make_hierarchy_dendrogram(city_list:pd.DataFrame, linkage:pd.DataFrame, colors:pd.DataFrame,
                               params=params) -> pd.DataFrame:
-    """
-        TODO
+    """ Uses the merge hierarchy that make_hierarchy_linkage() generated to represent proximity
+    among destinations.  Formulates a dendrogram representation of the merge hierarchy. 
+    Inputs:
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
+        linkage = a merge hierarchy that lumps destinations into sucessfully larger groups based
+            on geographic proximity.  Is the output from make_hierarchy_linkage()
+        colors = project's color palette matrix.  Projects the standard colors used across the
+            project.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
 
     ## extract bracket coordiantes
@@ -180,13 +221,17 @@ def make_hierarchy_dendrogram(city_list:pd.DataFrame, linkage:pd.DataFrame, colo
     return dendrogram
 
 
-def extract_leaf_nodes(hierarchy_dendrogram:pd.DataFrame, city_list:pd.DataFrame, params = params) -> pd.DataFrame:
-    """
-        TODO
+def extract_leaf_nodes(hierarchy_dendrogram:pd.DataFrame, city_list:pd.DataFrame) -> pd.DataFrame:
+    """ Extracts info. about terminal nodes ("leaves"; the destinations) from dendrogram object"
+    Inputs:
+        hierarchy_dendrogram = Coordinates needed to draw a dendrogram representation of a 
+            the distances between destinations
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
     """
     ## extract terminal node coordinates
     def get_node_coords(num, hd = hierarchy_dendrogram):
-        """TODO"""
+        """helper function to extract coordinates for each destination in the dendrogram"""
         i = [['left_name', '', '', 'right_name'][num]]
         i = i + ['icoord' + str(num), 'dcoord' + str(num)]
         hd = hd.copy()[i]
@@ -202,8 +247,15 @@ def extract_leaf_nodes(hierarchy_dendrogram:pd.DataFrame, city_list:pd.DataFrame
 
 
 def extract_merge_nodes(hierarchy_dendrogram:pd.DataFrame, colors:pd.DataFrame, params=params):
-    """
-        TODO
+    """ Extracts info. about non-terminal nodes "branches" from dendrogram object". These
+    nodes are groups of destinations that are geographically proximate.
+    Inputs:
+        hierarchy_dendrogram = Coordinates needed to draw a dendrogram representation of a 
+            the distances between destinations
+        colors = project's color palette matrix.  Projects the standard colors used across the
+            project.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
 
     ## extract merge node coordinates
@@ -224,6 +276,10 @@ def make_dendrogram(city_list:pd.DataFrame, colors:pd.DataFrame) -> list:
     """Wrapper function that executes the other functions in this section. Calculates a distance
     dendrogram for a set of points and returns the coordinate data necessary to draw that
     dendrogram.
+        city_list = project's main dataset.  Provides destination-wise information about my travels
+            and travel goals
+        colors = project's color palette matrix.  Projects the standard colors used across the
+            project.
     """
     hierarchy_linkage = make_hierarchy_linkage(city_list = city_list)
     hierarchy_linkage = name_composite_nodes(city_list = city_list, linkage = hierarchy_linkage)
@@ -237,16 +293,18 @@ def make_dendrogram(city_list:pd.DataFrame, colors:pd.DataFrame) -> list:
 ## COMPONENT FUNCTIONS - render figure
 
 def make_figure(params = params):
-    """
-        TODO
+    """ Generates a blank Plotly figure with suitable parameters for this script's dendrograms.
+    Inputs:
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
     fig = go.Figure()
     fig = fig.update_layout(
         template = 'plotly_dark',
         showlegend = False,
         width = params['width'], height = params['height'],
-        plot_bgcolor = params['figure_colors']['bg'],
-        paper_bgcolor = params['figure_colors']['bg'],
+        plot_bgcolor  = 'hsv(0,0,0)',
+        paper_bgcolor = 'hsv(0,0,0)',
         yaxis = dict(visible = False, autorange = 'reversed'),
         xaxis = dict(
             visible = True, 
@@ -263,8 +321,16 @@ def make_figure(params = params):
 
 
 def draw_dendrogram(trace_dict:dict, hierarchy_dendrogram:pd.DataFrame, prefix:str, params=params) -> dict:
-    """
-        TODO
+    """ Converts dendrogram coordinates to plotly traces, and appends them to a dict of traces.
+    Inputs:
+        trace_dict = a dict object to be filled with plotly traces.  These traces will be
+            drawn in the plotly figure during write_figure() and also tied into a slider
+            bar in add_slider().
+        hierarchy_dendrogram = Coordinates needed to draw a dendrogram representation of a 
+            the distances between destinations
+        prefix = an identifying string added to the dict keys for the traces generated.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
     icoords = ['icoord' + str(i) for i in range(0, 4)]
     dcoords = ['dcoord' + str(i) for i in range(0, 4)]
@@ -277,15 +343,26 @@ def draw_dendrogram(trace_dict:dict, hierarchy_dendrogram:pd.DataFrame, prefix:s
             hoverinfo = 'none', showlegend = False, mode = 'lines',
             line = dict(color = hierarchy_dendrogram.loc[iter_row, 'color']),
             name = name_now,
-            visible = params['first_visible'] == prefix
+            visible = params['first_visible'] == int(prefix.split('_')[0])
         )
     trace_dict.update(new_traces)
     return trace_dict
 
 
 def label_nodes(trace_dict, leaf_nodes, merge_nodes, prefix:str, params=params):
-    """
-        TODO
+    """ Adds traces to a dict of traces.  Traces depict destinations at the terminal edge
+    of the dendrograms.
+    Inputs:
+        trace_dict = a dict object to be filled with plotly traces.  These traces will be
+            drawn in the plotly figure during write_figure() and also tied into a slider
+            bar in add_slider().
+        leaf_nodes = Information on the terminal nodes (destinations).  Extracted from the 
+            dendrogram coordinates object.
+        merge_nodes = Information on the non-terminal nodes (destination groups).  Extracted from
+            the dendrogram coordinates object.
+        prefix = an identifying string added to the dict keys for the traces generated.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
     new_traces = dict()
 
@@ -303,7 +380,7 @@ def label_nodes(trace_dict, leaf_nodes, merge_nodes, prefix:str, params=params):
             size = 8
             ),
         textposition = 'middle left',
-        visible = params['first_visible'] == prefix
+        visible = params['first_visible'] == int(prefix.split('_')[0])
         )
 
     ## upper merges
@@ -327,7 +404,7 @@ def label_nodes(trace_dict, leaf_nodes, merge_nodes, prefix:str, params=params):
             size = 8
             ),
         textposition = 'middle left',
-        visible = params['first_visible'] == prefix
+        visible = params['first_visible'] == int(prefix.split('_')[0])
         )
 
     ## lower merges
@@ -351,20 +428,22 @@ def label_nodes(trace_dict, leaf_nodes, merge_nodes, prefix:str, params=params):
             size = 8
             ),
         textposition = 'middle left',
-        visible = params['first_visible'] == prefix
+        visible = params['first_visible'] == int(prefix.split('_')[0])
         )
 
     trace_dict.update(new_traces)
     return trace_dict
 
 
-def add_slider(trace_dict:dict, colors:pd.DataFrame) -> list:
+def add_slider(trace_dict:dict, colors:pd.DataFrame, params=params) -> list:
     """ Generates slider specifications for the plotly object.
     Input:
         trace_dict = A dict containing all of the plotly traces drawn so far. The slider controls
             which traces are visible.
-        colors = dataframe defining the colors used in the figures.
-        visible = Determines which slider element should be visible by default
+        colors = project's color palette matrix.  Projects the standard colors used across the
+            project.
+        params = The parameters dictionary defined at the top of this script.  Provides easy
+            access to parameters that might need adjustment.
     """
 
     ## generate visibility information
@@ -384,13 +463,20 @@ def add_slider(trace_dict:dict, colors:pd.DataFrame) -> list:
     slider = [dict(
         font = dict(size=10, color=colors.loc['L','grey']),
         currentvalue=dict(font=dict(size=12), prefix='Month: '),
-        active=5, steps=visible, pad=dict(b=0, l=8, r=8, t=0)
+        active=params['first_visible'] - 1, steps=visible, pad=dict(b=0, l=8, r=8, t=0)
         )]
     return slider
 
 
 def write_figure(fig:go.Figure, trace_dict:dict, slider:list):
-    """TODO
+    """ Add sliders and traces to a plotly figure.  Write figure as both a self-contained html
+    file and also as an html div section.  The self-contained file is for testing / trouble-
+    shooting.  0_executve_project.py injects the div code into a data dashboard.
+    Inputs:
+        fig = a blank, suitably formatted plotly figure
+        trace_dict = a dict of plotly traces, ready to write into the figure
+        slider = a plotly slider object, defining the relationship between trace visibility
+            and the slider's current state.
     """
     fig = fig.add_traces([i for i in trace_dict.values()])
     fig = fig.update_layout(sliders = slider)
@@ -407,8 +493,9 @@ def write_figure(fig:go.Figure, trace_dict:dict, slider:list):
 
 
 def draw_proximity_panel():
-    """
-        TODO
+    """ draw_proximity_panel() is the main function for this script.  It executes all of the other
+    functions.  execute_project.py imports this function to execute the project from start to
+    finish.
     """
     ## initialize plotly figure
     fig, trace_dict = make_figure()

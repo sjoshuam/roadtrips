@@ -19,19 +19,19 @@
         io_mid/MAP.div: html code contained inside a <div> tag, suitable for injection into
             the project's main html product.
     Open GitHub Issues:
-        #9 Adjust intakes as needed to deconflict with the detailed weather panel page
-        #11 Refresh panel when miles-walked data is more complete
-        #14 Add doc strings to all functions
-        #16 Wire module into a run-everything execute_project() function in 0_execute_project.py
+        #15 Centralize color palette
+        #26 Fill in missing doc strings
+        #11 Refresh panel when miles-walked data is more complete. (Low priority)
 """
 ##########==========##########==========##########==========##########==========##########==========
 ## INITIALIZE
 
 ## import packages
-import os
+import os, sys
+from xml.dom.minidom import parse as xml_parse
+if not sys.prefix.endswith('.venv'): raise Exception('Virtual Environment Not Detected')  
 import pandas as pd
 import plotly.graph_objects as go
-from xml.dom.minidom import parse as xml_parse
 
 ## define parameters
 params = {

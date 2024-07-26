@@ -26,17 +26,19 @@ params = dict(
 )
 
 ## functions needed to create assemble the data dashboard html
-import shutil, os
+    ## abort if not running the right virtual environment
+import sys, shutil, os
+if not sys.prefix.endswith('.venv'): raise Exception('Virtual Environment Not Detected')    
 import pandas as pd
 
 ## functions needed to regenerate the div files injected into the data dashboard
 if params['download_weather_data']:
-    from d1_weather import download_weather_data
+    from a2_weather import download_weather_data
 if params['regenerate_divs']:
-    from p1_progress import draw_progress_panel
-    from p2_proximity import draw_proximity_panel
-    from p3_map import draw_map_panel
-    from p4_oconus import draw_oconus_panel
+    from b1_progress import draw_progress_panel
+    from b2_proximity import draw_proximity_panel
+    from b3_map import draw_map_panel
+    from b4_oconus import draw_oconus_panel
 
 ##########==========##########==========##########==========##########==========##########==========
 ## DEFINE COMPONENT FUNCTIONS

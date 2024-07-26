@@ -19,7 +19,8 @@
 ## INITIALIZE
 
 ## import packages
-import warnings
+import warnings, sys
+if not sys.prefix.endswith('.venv'): raise Exception('Virtual Environment Not Detected')  
 import pandas as pd
 import plotly.graph_objects as go
 
