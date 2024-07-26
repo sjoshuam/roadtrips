@@ -22,7 +22,7 @@
 
 params = dict(
     download_weather_data = False,
-    regenerate_divs = True
+    regenerate_divs = False
 )
 
 ## functions needed to create assemble the data dashboard html
@@ -66,7 +66,7 @@ def fill_in_statistics(html_str: str, city_list = os.path.join('io_in', 'city_li
     Output: html_str = html str with statistics injected into the text
     """
 
-    ## extract statistics
+    ## extract city statistics
     city_list = pd.read_excel(city_list)
     stats = dict(
         GOAL = str(city_list.shape[0]),
@@ -74,6 +74,11 @@ def fill_in_statistics(html_str: str, city_list = os.path.join('io_in', 'city_li
     )
     with_pct = lambda x,y: str(x) + ' (' + str(int(100 * x / y)) + '%)'
     stats['SOFAR'] = with_pct(stats['SOFAR'], city_list.shape[0])
+
+    ## extract state statistics
+    is_a_state = ~city_list['state'].isin(['PR','DC'])
+    is_photographed = ~city_list['photo_date'].isna()
+    stats['STATES'] = str(len(set(city_list.loc[is_a_state & is_photographed, 'state'])))
 
     ## inject statistics into file and return
     for i in stats.keys():
