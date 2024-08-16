@@ -283,6 +283,7 @@ def draw_waffle(name:str, waffle:pd.DataFrame, trace_dict:dict, size=20, visible
         mode='markers',
         text=waffle['label'] + '<br>' + name.title() + ': ' + waffle['var'],
         customdata=waffle['status'],
+        hoverinfo = None,
         hovertemplate='%{text}<br>Status: %{customdata}<extra></extra>',
         marker=dict(
             color=waffle['fill'], size=size, symbol='square',

@@ -48,7 +48,8 @@ def extract_oconus_data(city_list):
     city_list = city_list.fillna({'not': ''}).sort_values('state')
     city_list = city_list.loc[city_list['not'].str.endswith('conus')].reset_index(drop = True)
     city_list['x'] = 20
-    city_list['y'] = [(params['height'] - 40) - (20 * i) for i in range(0, city_list.shape[0])]
+    space_coef = 4 / city_list.shape[0]
+    city_list['y'] = [(params['height'] - 40) - (20 * i * space_coef) for i in range(0, city_list.shape[0])]
 
     ## ensure legend is complete
     fallback = pd.DataFrame({'status': list(params['visit_colors'].keys())})
@@ -56,6 +57,7 @@ def extract_oconus_data(city_list):
     fallback['y'] = -20
     fallback['city'] = 'NULL'
     city_list = pd.concat([city_list, fallback])
+    print(city_list)
 
     return city_list
 

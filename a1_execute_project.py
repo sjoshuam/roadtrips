@@ -21,8 +21,8 @@
 ## HEADER
 
 params = dict(
-    download_weather_data = False,
-    regenerate_divs = False
+    download_weather_data = True,
+    regenerate_divs = True
 )
 
 ## functions needed to create assemble the data dashboard html
